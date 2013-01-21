@@ -118,9 +118,27 @@ protected:
 
 public:
 	CodeArray(size_t maxSize = MAX_FIXED_BUF_SIZE, void *userPtr = 0, Allocator *allocator = 0)
+	: type_(getType(maxSize, userPtr))
+	, alloc_(allocator ? allocator : &defaultAllocator_)
+	, maxSize_(maxSize)
+	, top_(isAllocType() ? alloc_->alloc(maxSize) : type_ == USER_BUF ? reinterpret_cast<uint8*>(userPtr) : buf_)
+	, size_(0)
 	{
+		if (maxSize_ > 0 && top_ == 0) throw ERR_CANT_ALLOC;
+		if ((type_ == ALLOC_BUF && alloc_->useProtect()) && !protect(top_, maxSize, true)) {
+			alloc_->free(top_);
+			throw ERR_CANT_PROTECT;
+		}
 	}
 	const uint8 *getCurr() const { return &top_[size_]; }
+	static inline bool protect(const void *addr, size_t size, bool canExec)
+	{
+		size_t pageSize = sysconf(_SC_PAGESIZE);
+		size_t iaddr = reinterpret_cast<size_t>(addr);
+		size_t roundAddr = iaddr & ~(pageSize - static_cast<size_t>(1));
+		int mode = PROT_READ | PROT_WRITE | (canExec ? PROT_EXEC : 0);
+		return mprotect(reinterpret_cast<void*>(roundAddr), size + (iaddr - roundAddr), mode) == 0;
+	}
 };
 
 class CodeGenerator : public CodeArray {
