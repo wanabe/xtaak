@@ -104,8 +104,12 @@ public:
 
 class CodeGenerator : public CodeArray {
 public:
+	const Reg fp, ip, sp, lr, pc, spW;
+public:
 	CodeGenerator(size_t maxSize = DEFAULT_MAX_CODE_SIZE, void *userPtr = 0, Allocator *allocator = 0)
 		: CodeArray(maxSize, userPtr, allocator)
+		, fp(Operand::FP), ip(Operand::IP), sp(Operand::SP)
+		, lr(Operand::LR), pc(Operand::PC), spW(Operand::SPW)
 	{
 	}
 };
