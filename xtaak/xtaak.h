@@ -71,6 +71,21 @@ struct Allocator {
 	virtual bool useProtect() const { return true; }
 };
 
+class Operand {
+public:
+	enum Code {
+		FP = 11, IP, SP, LR, PC,
+		SPW = 13 + 32,
+	};
+};
+
+class Reg : public Operand {
+public:
+	explicit Reg(int idx) {}
+private:
+	void operator=(const Reg&);
+};
+
 class CodeArray {
 	enum {
 		MAX_FIXED_BUF_SIZE = 8
