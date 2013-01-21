@@ -86,10 +86,31 @@ private:
 	void operator=(const Reg&);
 };
 
+// 2nd parameter for constructor of CodeArray(maxSize, userPtr, alloc)
+void *const AutoGrow = (void*)1;
+
 class CodeArray {
 	enum {
 		MAX_FIXED_BUF_SIZE = 8
 	};
+	enum Type {
+		FIXED_BUF, // use buf_(non alignment, non protect)
+		USER_BUF, // use userPtr(non alignment, non protect)
+		ALLOC_BUF, // use new(alignment, protect)
+		AUTO_GROW // automatically move and grow memory if necessary
+	};
+	bool isAllocType() const { return type_ == ALLOC_BUF || type_ == AUTO_GROW; }
+	Type getType(size_t maxSize, void *userPtr) const
+	{
+		if (userPtr == AutoGrow) return AUTO_GROW;
+		if (userPtr) return USER_BUF;
+		if (maxSize <= MAX_FIXED_BUF_SIZE) return FIXED_BUF;
+		return ALLOC_BUF;
+	}
+	const Type type_;
+	Allocator defaultAllocator_;
+	Allocator *alloc_;
+	uint8 buf_[MAX_FIXED_BUF_SIZE]; // for FIXED_BUF
 protected:
 	size_t maxSize_;
 	uint8 *top_;
