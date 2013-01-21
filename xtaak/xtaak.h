@@ -18,6 +18,8 @@ typedef unsigned char uint8;
 
 enum Error {
 	ERR_NONE = 0,
+	ERR_CANT_PROTECT,
+	ERR_CANT_ALLOC,
 	ERR_INTERNAL
 };
 
@@ -25,6 +27,8 @@ inline const char *ConvertErrorToString(Error err)
 {
 	static const char *errTbl[] = {
 		"none",
+		"can't protect",
+		"can't alloc",
 		"internal error",
 	};
 	if (err < 0 || err > ERR_INTERNAL) return 0;
