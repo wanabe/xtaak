@@ -3,6 +3,8 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/mman.h>
+#include <unistd.h>
 
 namespace Xtaak {
 
@@ -35,7 +37,38 @@ inline const char *ConvertErrorToString(Error err)
 	return errTbl[err];
 }
 
+inline void *AlignedMalloc(size_t size, size_t alignment)
+{
+#ifdef __ANDROID__
+	return memalign(size, alignment);
+#else
+	void *p;
+	int ret = posix_memalign(&p, alignment, size);
+	return (ret == 0) ? p : 0;
+#endif
+}
+
+inline void AlignedFree(void *p)
+{
+	free(p);
+}
+
+namespace inner {
+
+enum { debug = 1 };
+static const size_t ALIGN_PAGE_SIZE = 4096;
+
+} // inner
+
+/*
+	custom allocator
+*/
 struct Allocator {
+	virtual uint8 *alloc(size_t size) { return reinterpret_cast<uint8*>(AlignedMalloc(size, inner::ALIGN_PAGE_SIZE)); }
+	virtual void free(uint8 *p) { AlignedFree(p); }
+	virtual ~Allocator() {}
+	/* override to return false if you call protect() manually */
+	virtual bool useProtect() const { return true; }
 };
 
 class CodeArray {
