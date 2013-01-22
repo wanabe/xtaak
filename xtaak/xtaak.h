@@ -130,6 +130,13 @@ public:
 			throw ERR_CANT_PROTECT;
 		}
 	}
+	virtual ~CodeArray()
+	{
+		if (isAllocType()) {
+			if (alloc_->useProtect()) protect(top_, maxSize_, false);
+			alloc_->free(top_);
+		}
+	}
 	const uint8 *getCurr() const { return &top_[size_]; }
 	static inline bool protect(const void *addr, size_t size, bool canExec)
 	{
