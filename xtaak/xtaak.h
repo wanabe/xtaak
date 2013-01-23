@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <stdint.h>
 
 namespace Xtaak {
 
@@ -15,7 +16,7 @@ enum {
 
 #ifndef MIE_INTEGER_TYPE_DEFINED
 #define MIE_INTEGER_TYPE_DEFINED
-typedef unsigned char uint8;
+typedef uint32_t uint32;
 #endif
 
 enum Error {
@@ -64,8 +65,8 @@ static const size_t ALIGN_PAGE_SIZE = 4096;
 	custom allocator
 */
 struct Allocator {
-	virtual uint8 *alloc(size_t size) { return reinterpret_cast<uint8*>(AlignedMalloc(size, inner::ALIGN_PAGE_SIZE)); }
-	virtual void free(uint8 *p) { AlignedFree(p); }
+	virtual uint32 *alloc(size_t size) { return reinterpret_cast<uint32*>(AlignedMalloc(size * sizeof(uint32), inner::ALIGN_PAGE_SIZE)); }
+	virtual void free(uint32 *p) { AlignedFree(p); }
 	virtual ~Allocator() {}
 	/* override to return false if you call protect() manually */
 	virtual bool useProtect() const { return true; }
@@ -110,10 +111,10 @@ class CodeArray {
 	const Type type_;
 	Allocator defaultAllocator_;
 	Allocator *alloc_;
-	uint8 buf_[MAX_FIXED_BUF_SIZE]; // for FIXED_BUF
+	uint32 buf_[MAX_FIXED_BUF_SIZE]; // for FIXED_BUF
 protected:
 	size_t maxSize_;
-	uint8 *top_;
+	uint32 *top_;
 	size_t size_;
 
 public:
@@ -121,7 +122,7 @@ public:
 	: type_(getType(maxSize, userPtr))
 	, alloc_(allocator ? allocator : &defaultAllocator_)
 	, maxSize_(maxSize)
-	, top_(isAllocType() ? alloc_->alloc(maxSize) : type_ == USER_BUF ? reinterpret_cast<uint8*>(userPtr) : buf_)
+	, top_(isAllocType() ? alloc_->alloc(maxSize) : type_ == USER_BUF ? reinterpret_cast<uint32*>(userPtr) : buf_)
 	, size_(0)
 	{
 		if (maxSize_ > 0 && top_ == 0) throw ERR_CANT_ALLOC;
@@ -137,14 +138,14 @@ public:
 			alloc_->free(top_);
 		}
 	}
-	const uint8 *getCurr() const { return &top_[size_]; }
+	const uint32 *getCurr() const { return &top_[size_]; }
 	static inline bool protect(const void *addr, size_t size, bool canExec)
 	{
 		size_t pageSize = sysconf(_SC_PAGESIZE);
 		size_t iaddr = reinterpret_cast<size_t>(addr);
 		size_t roundAddr = iaddr & ~(pageSize - static_cast<size_t>(1));
 		int mode = PROT_READ | PROT_WRITE | (canExec ? PROT_EXEC : 0);
-		return mprotect(reinterpret_cast<void*>(roundAddr), size + (iaddr - roundAddr), mode) == 0;
+		return mprotect(reinterpret_cast<void*>(roundAddr), size * sizeof(uint32) + (iaddr - roundAddr), mode) == 0;
 	}
 };
 
