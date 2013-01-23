@@ -76,16 +76,36 @@ struct Allocator {
 };
 
 class Operand {
+private:
+	const uint8 idx_;
+	const uint8 kind_;
 public:
+	enum Kind {
+		NONE = 0,
+		REG = 1 << 1,
+	};
 	enum Code {
 		FP = 11, IP, SP, LR, PC,
 		SPW = 13 + 32,
 	};
+	Operand() : idx_(0), kind_(0) { }
+	Operand(int idx, Kind kind)
+		: idx_(static_cast<uint8>(idx))
+		, kind_(static_cast<uint8>(kind))
+	{
+	}
+	int getIdx() const { return idx_; }
+	bool isREG() const { return is(REG); }
+	// any bit is accetable if bit == 0
+	bool is(int kind) const
+	{
+		return (kind_ & kind);
+	}
 };
 
 class Reg : public Operand {
 public:
-	explicit Reg(int idx) {}
+	explicit Reg(int idx) : Operand(idx, Operand::REG) {}
 private:
 	void operator=(const Reg&);
 };
