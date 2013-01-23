@@ -16,6 +16,7 @@ enum {
 
 #ifndef MIE_INTEGER_TYPE_DEFINED
 #define MIE_INTEGER_TYPE_DEFINED
+typedef uint8_t uint8;
 typedef uint32_t uint32;
 #endif
 
@@ -23,6 +24,7 @@ enum Error {
 	ERR_NONE = 0,
 	ERR_CANT_PROTECT,
 	ERR_CANT_ALLOC,
+	ERR_NOT_IMPL,
 	ERR_INTERNAL
 };
 
@@ -32,6 +34,7 @@ inline const char *ConvertErrorToString(Error err)
 		"none",
 		"can't protect",
 		"can't alloc",
+		"not implemented yet",
 		"internal error",
 	};
 	if (err < 0 || err > ERR_INTERNAL) return 0;
