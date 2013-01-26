@@ -83,6 +83,7 @@ class Operand {
 private:
 	const uint8 idx_;
 	const uint8 kind_;
+	const uint32 disp_;
 public:
 	enum Kind {
 		NONE = 0,
@@ -93,13 +94,14 @@ public:
 		FP = 11, IP, SP, LR, PC,
 		SPW = 13 + 32,
 	};
-	Operand() : idx_(0), kind_(0) { }
-	Operand(int idx, Kind kind)
+	Operand() : idx_(0), kind_(0), disp_(0) { }
+	Operand(int idx, Kind kind, uint32 disp)
 		: idx_(static_cast<uint8>(idx))
-		, kind_(static_cast<uint8>(kind))
+		, kind_(static_cast<uint8>(kind)), disp_(disp)
 	{
 	}
 	int getIdx() const { return idx_; }
+	uint32 getDisp() const { return disp_; }
 	bool isREG() const { return is(REG); }
 	// any bit is accetable if bit == 0
 	bool is(int kind) const
@@ -109,10 +111,19 @@ public:
 };
 
 class Reg : public Operand {
-public:
-	explicit Reg(int idx) : Operand(idx, Operand::REG) {}
 private:
 	void operator=(const Reg&);
+	friend Reg operator+(const Reg& r, unsigned int disp)
+	{
+		return Reg(r, r.getDisp() + disp);
+	}
+public:
+	explicit Reg(int idx) : Operand(idx, Operand::REG, 0)
+	{
+	}
+	Reg(const Reg& base, unsigned int disp) : Operand(base.getIdx(), Operand::REG, disp)
+	{
+	}
 };
 
 // 2nd parameter for constructor of CodeArray(maxSize, userPtr, alloc)
