@@ -89,6 +89,7 @@ public:
 		REG = 1 << 1,
 	};
 	enum Code {
+		R0 = 0, R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15,
 		FP = 11, IP, SP, LR, PC,
 		SPW = 13 + 32,
 	};
@@ -178,6 +179,7 @@ public:
 
 class CodeGenerator : public CodeArray {
 public:
+	const Reg r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15;
 	const Reg fp, ip, sp, lr, pc, spW;
 	void mov(const Operand& reg1, const Operand& reg2)
 	{
@@ -193,6 +195,7 @@ public:
 		: CodeArray(maxSize, userPtr, allocator)
 		, fp(Operand::FP), ip(Operand::IP), sp(Operand::SP)
 		, lr(Operand::LR), pc(Operand::PC), spW(Operand::SPW)
+		, r0(0), r1(1), r2(2), r3(3), r4(4), r5(5), r6(6), r7(7), r8(8), r9(9), r10(10), r11(11), r12(12), r13(13), r14(14), r15(15)
 	{
 	}
 };
