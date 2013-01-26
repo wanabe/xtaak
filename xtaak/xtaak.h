@@ -175,6 +175,10 @@ public:
 		int mode = PROT_READ | PROT_WRITE | (canExec ? PROT_EXEC : 0);
 		return mprotect(reinterpret_cast<void*>(roundAddr), size * sizeof(uint32) + (iaddr - roundAddr), mode) == 0;
 	}
+	void dd(uint32 code)
+	{
+		top_[size_++] = code;
+	}
 };
 
 class CodeGenerator : public CodeArray {
@@ -185,7 +189,7 @@ public:
 	{
 		if (reg1.isREG() && reg1.getIdx() == Operand::PC &&
 		    reg2.isREG() && reg2.getIdx() == Operand::LR) {
-			top_[size_++] = 0xe1a0f00e;
+			dd(0xe1a0f00e);
 		} else {
 			throw ERR_NOT_IMPL;
 		}
