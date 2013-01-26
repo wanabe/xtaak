@@ -232,6 +232,13 @@ public:
 		dd(0xe3000000 | (imm & 0xf000) << 4 | reg.getIdx() << 12
 		   | (imm & 0xfff));
 	}
+	void add(const Operand& reg1, const Operand& reg2, const Operand& reg3)
+	{
+		if (!reg1.isREG() || !reg2.isREG()) { throw ERR_BAD_COMBINATION; }
+		if (!reg3.isREG() || reg3.getDisp() != 0) { throw ERR_NOT_IMPL; }
+		dd(0xe0800000 | reg2.getIdx() << 16 | reg1.getIdx() << 12
+		   | reg3.getIdx());
+	}
 public:
 	CodeGenerator(size_t maxSize = DEFAULT_MAX_CODE_SIZE, void *userPtr = 0, Allocator *allocator = 0)
 		: CodeArray(maxSize, userPtr, allocator)
