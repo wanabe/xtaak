@@ -22,6 +22,8 @@ typedef uint32_t uint32;
 
 enum Error {
 	ERR_NONE = 0,
+	ERR_BAD_COMBINATION,
+	ERR_IMM_IS_TOO_BIG,
 	ERR_CANT_PROTECT,
 	ERR_CANT_ALLOC,
 	ERR_NOT_IMPL,
@@ -32,6 +34,8 @@ inline const char *ConvertErrorToString(Error err)
 {
 	static const char *errTbl[] = {
 		"none",
+		"bad combination",
+		"imm is too big",
 		"can't protect",
 		"can't alloc",
 		"not implemented yet",
