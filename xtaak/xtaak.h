@@ -239,6 +239,26 @@ public:
 		dd(0xe0800000 | reg2.getIdx() << 16 | reg1.getIdx() << 12
 		   | reg3.getIdx());
 	}
+	void ldm(const Operand& reg1, const Operand& reg2, const Operand& reg3,
+	         const Operand& reg4, const Operand& reg5)
+	{
+		uint32 bits = 0;
+		bits |= 1 << reg2.getIdx();
+		bits |= 1 << reg3.getIdx();
+		bits |= 1 << reg4.getIdx();
+		bits |= 1 << reg5.getIdx();
+		dd(0xe8900000 | reg1.getIdx() << 16 | bits);
+	}
+	void stm(const Operand& reg1, const Operand& reg2, const Operand& reg3,
+	         const Operand& reg4, const Operand& reg5)
+	{
+		uint32 bits = 0;
+		bits |= 1 << reg2.getIdx();
+		bits |= 1 << reg3.getIdx();
+		bits |= 1 << reg4.getIdx();
+		bits |= 1 << reg5.getIdx();
+		dd(0xe8800000 | reg1.getIdx() << 16 | bits);
+	}
 public:
 	CodeGenerator(size_t maxSize = DEFAULT_MAX_CODE_SIZE, void *userPtr = 0, Allocator *allocator = 0)
 		: CodeArray(maxSize, userPtr, allocator)
