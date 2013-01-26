@@ -205,6 +205,24 @@ public:
 			throw ERR_NOT_IMPL;
 		}
 	}
+	void ldr(const Operand& reg1, const Operand& reg2)
+	{
+		if (reg1.isREG() && reg2.isREG()) {
+			dd(0xe5900000 | reg2.getIdx() << 16
+			   | reg1.getIdx() << 12| reg2.getDisp());
+		} else {
+			throw ERR_NOT_IMPL;
+		}
+	}
+	void str(const Operand& reg1, const Operand& reg2)
+	{
+		if (reg1.isREG() && reg2.isREG()) {
+			dd(0xe5800000 | reg2.getIdx() << 16
+			   | reg1.getIdx() << 12| reg2.getDisp());
+		} else {
+			throw ERR_NOT_IMPL;
+		}
+	}
 public:
 	CodeGenerator(size_t maxSize = DEFAULT_MAX_CODE_SIZE, void *userPtr = 0, Allocator *allocator = 0)
 		: CodeArray(maxSize, userPtr, allocator)
