@@ -66,6 +66,8 @@ namespace inner {
 enum { debug = 1 };
 static const size_t ALIGN_PAGE_SIZE = 4096;
 
+inline bool IsInUint16(uint32 x) { return x <= 0xffff; }
+
 } // inner
 
 /*
@@ -222,6 +224,13 @@ public:
 		} else {
 			throw ERR_NOT_IMPL;
 		}
+	}
+	void movw(const Operand& reg, const uint32 imm)
+	{
+		if (!reg.isREG()) { throw ERR_BAD_COMBINATION; }
+		if (!inner::IsInUint16(imm)) { throw ERR_IMM_IS_TOO_BIG; }
+		dd(0xe3000000 | (imm & 0xf000) << 4 | reg.getIdx() << 12
+		   | (imm & 0xfff));
 	}
 public:
 	CodeGenerator(size_t maxSize = DEFAULT_MAX_CODE_SIZE, void *userPtr = 0, Allocator *allocator = 0)
