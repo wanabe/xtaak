@@ -282,6 +282,11 @@ public:
 		if (reg5.getIdx() != -1) { bits |= 1 << reg5.getIdx(); }
 		dd(0xe8800000 | reg1.getIdx() << 16 | bits);
 	}
+	void b(const int imm)
+	{
+		if (imm < -0x2000000 || imm > 0x1fffffc) { throw ERR_IMM_IS_TOO_BIG; }
+		dd(0xea000000 | ((const unsigned int)(imm >> 2) & 0xffffff));
+	}
 public:
 	CodeGenerator(size_t maxSize = DEFAULT_MAX_CODE_SIZE, void *userPtr = 0, Allocator *allocator = 0)
 		: CodeArray(maxSize, userPtr, allocator)
