@@ -16,6 +16,7 @@ enum {
 
 #ifndef MIE_INTEGER_TYPE_DEFINED
 #define MIE_INTEGER_TYPE_DEFINED
+typedef int8_t int8;
 typedef uint8_t uint8;
 typedef uint32_t uint32;
 #endif
@@ -83,7 +84,7 @@ struct Allocator {
 
 class Operand {
 private:
-	const uint8 idx_;
+	const int8 idx_;
 	const uint8 kind_;
 	const uint32 disp_;
 public:
@@ -239,24 +240,26 @@ public:
 		dd(0xe0800000 | reg2.getIdx() << 16 | reg1.getIdx() << 12
 		   | reg3.getIdx());
 	}
-	void ldm(const Operand& reg1, const Operand& reg2, const Operand& reg3,
-	         const Operand& reg4, const Operand& reg5)
+	void ldm(const Operand& reg1, const Operand& reg2,
+	         const Operand& reg3 = Reg(-1), const Operand& reg4 = Reg(-1),
+	         const Operand& reg5 = Reg(-1))
 	{
 		uint32 bits = 0;
 		bits |= 1 << reg2.getIdx();
-		bits |= 1 << reg3.getIdx();
-		bits |= 1 << reg4.getIdx();
-		bits |= 1 << reg5.getIdx();
+		if (reg3.getIdx() != -1) { bits |= 1 << reg3.getIdx(); }
+		if (reg4.getIdx() != -1) { bits |= 1 << reg4.getIdx(); }
+		if (reg5.getIdx() != -1) { bits |= 1 << reg5.getIdx(); }
 		dd(0xe8900000 | reg1.getIdx() << 16 | bits);
 	}
-	void stm(const Operand& reg1, const Operand& reg2, const Operand& reg3,
-	         const Operand& reg4, const Operand& reg5)
+	void stm(const Operand& reg1, const Operand& reg2,
+	         const Operand& reg3 = Reg(-1), const Operand& reg4 = Reg(-1),
+	         const Operand& reg5 = Reg(-1))
 	{
 		uint32 bits = 0;
 		bits |= 1 << reg2.getIdx();
-		bits |= 1 << reg3.getIdx();
-		bits |= 1 << reg4.getIdx();
-		bits |= 1 << reg5.getIdx();
+		if (reg3.getIdx() != -1) { bits |= 1 << reg3.getIdx(); }
+		if (reg4.getIdx() != -1) { bits |= 1 << reg4.getIdx(); }
+		if (reg5.getIdx() != -1) { bits |= 1 << reg5.getIdx(); }
 		dd(0xe8800000 | reg1.getIdx() << 16 | bits);
 	}
 public:
