@@ -68,6 +68,7 @@ enum { debug = 1 };
 static const size_t ALIGN_PAGE_SIZE = 4096;
 
 inline bool IsInUint16(uint32 x) { return x <= 0xffff; }
+inline bool IsInUint8(uint32 x) { return x <= 0xff; }
 
 } // inner
 
@@ -251,6 +252,13 @@ public:
 		if (!reg3.isREG() || reg3.getDisp() != 0) { throw ERR_NOT_IMPL; }
 		dd(0xe0800000 | reg2.getIdx() << 16 | reg1.getIdx() << 12
 		   | reg3.getIdx());
+	}
+	void add(const Operand& reg1, const Operand& reg2, const uint32 imm)
+	{
+		if (!reg1.isREG() || !reg2.isREG()) { throw ERR_BAD_COMBINATION; }
+		if (!inner::IsInUint8(imm)) { throw ERR_IMM_IS_TOO_BIG; }
+		dd(0xe2800000 | reg2.getIdx() << 16 | reg1.getIdx() << 12
+		   | imm);
 	}
 	void ldm(const Operand& reg1, const Operand& reg2,
 	         const Operand& reg3 = Reg(-1), const Operand& reg4 = Reg(-1),
