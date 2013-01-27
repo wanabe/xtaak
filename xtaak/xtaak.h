@@ -233,6 +233,18 @@ public:
 		dd(0xe3000000 | (imm & 0xf000) << 4 | reg.getIdx() << 12
 		   | (imm & 0xfff));
 	}
+	void movt(const Operand& reg, const uint32 imm)
+	{
+		if (!reg.isREG()) { throw ERR_BAD_COMBINATION; }
+		if (!inner::IsInUint16(imm)) { throw ERR_IMM_IS_TOO_BIG; }
+		dd(0xe3400000 | (imm & 0xf000) << 4 | reg.getIdx() << 12
+		   | (imm & 0xfff));
+	}
+	void mov32(const Operand& reg, const uint32 imm)
+	{
+		movw(reg, imm & 0xffff);
+		movt(reg, imm >> 16);
+	}
 	void add(const Operand& reg1, const Operand& reg2, const Operand& reg3)
 	{
 		if (!reg1.isREG() || !reg2.isREG()) { throw ERR_BAD_COMBINATION; }
