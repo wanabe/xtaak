@@ -49,7 +49,7 @@ inline const char *ConvertErrorToString(Error err)
 inline void *AlignedMalloc(size_t size, size_t alignment)
 {
 #ifdef __ANDROID__
-	return memalign(size, alignment);
+	return memalign(alignment, size);
 #else
 	void *p;
 	int ret = posix_memalign(&p, alignment, size);
