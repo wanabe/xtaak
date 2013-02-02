@@ -17,6 +17,7 @@ enum {
 #ifndef MIE_INTEGER_TYPE_DEFINED
 #define MIE_INTEGER_TYPE_DEFINED
 typedef int8_t int8;
+typedef int32_t int32;
 typedef uint8_t uint8;
 typedef uint32_t uint32;
 #endif
@@ -282,10 +283,14 @@ public:
 		if (reg5.getIdx() != -1) { bits |= 1 << reg5.getIdx(); }
 		dd(0xe8800000 | reg1.getIdx() << 16 | bits);
 	}
-	void b(const int imm)
+	void b(const int32 imm)
 	{
-		if (imm < -0x2000000 || imm > 0x1fffffc) { throw ERR_IMM_IS_TOO_BIG; }
-		dd(0xea000000 | ((const unsigned int)(imm >> 2) & 0xffffff));
+		if (imm < -0x800000 || imm > 0x7fffff) { throw ERR_IMM_IS_TOO_BIG; }
+		dd(0xea000000 | ((const uint32)imm & 0xffffff));
+	}
+	void b(const void *addr)
+	{
+		b(((int32)addr - (int32)getCurr() - 8) >> 2);
 	}
 public:
 	CodeGenerator(size_t maxSize = DEFAULT_MAX_CODE_SIZE, void *userPtr = 0, Allocator *allocator = 0)
