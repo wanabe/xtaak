@@ -70,13 +70,13 @@ static const size_t ALIGN_PAGE_SIZE = 4096;
 
 inline bool IsInUint16(uint32 x) { return x <= 0xffff; }
 inline bool IsInUint8(uint32 x) { return x <= 0xff; }
-int getRotationImm(uint32 *x) {
-	int rotation = 0;
-	while(*x > 0xff) {
-		*x = (*x >> 30) | (*x << 2);
-		if (++rotation >= 16) { return -1; }
+uint32 getShifterImm(uint32 x) {
+	uint32 shift = 0;
+	while(x > 0xff && shift < 0x1000) {
+		x = (x >> 30) | (x << 2);
+		shift += 0x100;
 	}
-	return rotation;
+	return shift | x;
 }
 
 } // inner
@@ -265,17 +265,17 @@ public:
 	void add(const Operand& reg1, const Operand& reg2, uint32 imm)
 	{
 		if (!reg1.isREG() || !reg2.isREG()) { throw ERR_BAD_COMBINATION; }
-		int rotation = inner::getRotationImm(&imm);
-		if (!rotation < 0) { throw ERR_IMM_IS_TOO_BIG; }
+		imm = inner::getShifterImm(imm);
+		if (!imm > 0x1000) { throw ERR_IMM_IS_TOO_BIG; }
 		dd(0xe2800000 | reg2.getIdx() << 16 | reg1.getIdx() << 12
-		   | rotation << 8 | imm);
+		   | imm);
 	}
 	void cmp(const Operand& reg, uint32 imm)
 	{
 		if (!reg.isREG()) { throw ERR_BAD_COMBINATION; }
-		int rotation = inner::getRotationImm(&imm);
-		if (!rotation < 0) { throw ERR_IMM_IS_TOO_BIG; }
-		dd(0xe3500000 | reg.getIdx() << 16 | rotation << 8 | imm);
+		imm = inner::getShifterImm(imm);
+		if (!imm > 0x1000) { throw ERR_IMM_IS_TOO_BIG; }
+		dd(0xe3500000 | reg.getIdx() << 16 | imm);
 	}
 	void ldm(const Operand& reg1, const Operand& reg2,
 	         const Operand& reg3 = Reg(-1), const Operand& reg4 = Reg(-1),
