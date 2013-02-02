@@ -270,6 +270,13 @@ public:
 		dd(0xe2800000 | reg2.getIdx() << 16 | reg1.getIdx() << 12
 		   | rotation << 8 | imm);
 	}
+	void cmp(const Operand& reg, uint32 imm)
+	{
+		if (!reg.isREG()) { throw ERR_BAD_COMBINATION; }
+		int rotation = inner::getRotationImm(&imm);
+		if (!rotation < 0) { throw ERR_IMM_IS_TOO_BIG; }
+		dd(0xe3500000 | reg.getIdx() << 16 | rotation << 8 | imm);
+	}
 	void ldm(const Operand& reg1, const Operand& reg2,
 	         const Operand& reg3 = Reg(-1), const Operand& reg4 = Reg(-1),
 	         const Operand& reg5 = Reg(-1))
