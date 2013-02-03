@@ -311,6 +311,11 @@ public:
 		dd(0xe2900000 | reg2.getIdx() << 16 | reg1.getIdx() << 12
 		   | imm);
 	}
+	void cmp(const Operand& reg1, const Operand& reg2)
+	{
+		if (!reg1.isREG() || !reg2.isREG()) { throw ERR_BAD_COMBINATION; }
+		dd(0xe1500000 | reg1.getIdx() << 16 | reg2.getIdx());
+	}
 	void cmp(const Operand& reg, uint32 imm)
 	{
 		if (!reg.isREG()) { throw ERR_BAD_COMBINATION; }
