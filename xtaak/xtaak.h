@@ -101,11 +101,15 @@ public:
 	enum Kind {
 		NONE = 0,
 		REG = 1 << 1,
+		SFR = 1 << 2,
+		DFR = 1 << 3,
 	};
 	enum Code {
 		R0 = 0, R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15,
 		FP = 11, IP, SP, LR, PC,
 		SPW = 13 + 32,
+		D0 = 0, D1, D2,
+		S0 = 0, S1, S2,
 	};
 	Operand() : idx_(0), kind_(0), disp_(0) { }
 	Operand(int idx, Kind kind, uint32 disp)
@@ -116,6 +120,8 @@ public:
 	int getIdx() const { return idx_; }
 	uint32 getDisp() const { return disp_; }
 	bool isREG() const { return is(REG); }
+	bool isSFR() const { return is(SFR); }
+	bool isDFR() const { return is(DFR); }
 	// any bit is accetable if bit == 0
 	bool is(int kind) const
 	{
@@ -135,6 +141,24 @@ public:
 	{
 	}
 	Reg(const Reg& base, unsigned int disp) : Operand(base.getIdx(), Operand::REG, disp)
+	{
+	}
+};
+
+class SFReg : public Operand {
+private:
+	void operator=(const SFReg&);
+public:
+	explicit SFReg(int idx) : Operand(idx, Operand::SFR, 0)
+	{
+	}
+};
+
+class DFReg : public Operand {
+private:
+	void operator=(const DFReg&);
+public:
+	explicit DFReg(int idx) : Operand(idx, Operand::DFR, 0)
 	{
 	}
 };
@@ -209,6 +233,8 @@ class CodeGenerator : public CodeArray {
 public:
 	const Reg r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15;
 	const Reg fp, ip, sp, lr, pc, spW;
+	const SFReg s0, s1, s2;
+	const DFReg d0, d1, d2;
 	void mov(const Operand& reg1, const Operand& reg2)
 	{
 		if (reg1.isREG() && reg1.getIdx() == Operand::PC &&
@@ -356,6 +382,10 @@ public:
 		, fp(Operand::FP), ip(Operand::IP), sp(Operand::SP)
 		, lr(Operand::LR), pc(Operand::PC), spW(Operand::SPW)
 		, r0(0), r1(1), r2(2), r3(3), r4(4), r5(5), r6(6), r7(7), r8(8), r9(9), r10(10), r11(11), r12(12), r13(13), r14(14), r15(15)
+#ifndef DISABLE_VFP
+		, s0(0), s1(1), s2(2)
+		, d0(0), d1(1), d2(2)
+#endif
 	{
 	}
 };
