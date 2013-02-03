@@ -390,10 +390,19 @@ public:
 		bvc(((int32)addr - (int32)getCurr() - 8) >> 2);
 	}
 #ifndef DISABLE_VFP
+	void fcmpd(const Operand& dreg1, const Operand& dreg2)
+	{
+		dd(0xeeb40b40 | dreg1.getIdx() << 12 |
+		   dreg2.getIdx());
+	}
 	void fmsr(const Operand& sreg, const Operand& reg)
 	{
 		dd(0xee000a10 | (sreg.getIdx() >> 1) << 16 |
 		   reg.getIdx() << 12 | (sreg.getIdx() & 1) << 7);
+	}
+	void fmstat()
+	{
+		dd(0xeef1fa10);
 	}
 	void fsitod(const Operand& dreg, const Operand& sreg)
 	{
