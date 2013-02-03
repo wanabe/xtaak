@@ -341,6 +341,15 @@ public:
 	{
 		beq(((int32)addr - (int32)getCurr() - 8) >> 2);
 	}
+	void bvc(const int imm)
+	{
+		if (imm < -0x800000 || imm > 0x7fffff) { throw ERR_IMM_IS_TOO_BIG; }
+		dd(0x7a000000 | ((const uint32)imm & 0xffffff));
+	}
+	void bvc(const void *addr)
+	{
+		bvc(((int32)addr - (int32)getCurr() - 8) >> 2);
+	}
 public:
 	CodeGenerator(size_t maxSize = DEFAULT_MAX_CODE_SIZE, void *userPtr = 0, Allocator *allocator = 0)
 		: CodeArray(maxSize, userPtr, allocator)
