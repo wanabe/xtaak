@@ -231,10 +231,18 @@ public:
 
 class CodeGenerator : public CodeArray {
 public:
+	enum Cond {
+		EQ = 0, NE, CS, CC, MI, PL, VS, VC, HI, LS, GE, LT, GT, LE, AL,
+	};
 	const Reg r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15;
 	const Reg fp, ip, sp, lr, pc, spW;
 	const SFReg s0, s1, s2;
 	const DFReg d0, d1, d2;
+	Cond cond_;
+	void setCond(const Cond cond)
+	{
+		cond_ = cond;
+	}
 	void mov(const Operand& reg1, const Operand& reg2)
 	{
 		if (reg1.isREG() && reg1.getIdx() == Operand::PC &&
@@ -293,8 +301,8 @@ public:
 		if (!reg1.isREG() || !reg2.isREG()) { throw ERR_BAD_COMBINATION; }
 		imm = inner::getShifterImm(imm);
 		if (!imm > 0x1000) { throw ERR_IMM_IS_TOO_BIG; }
-		dd(0xe2800000 | reg2.getIdx() << 16 | reg1.getIdx() << 12
-		   | imm);
+		dd(cond_ << 28 | 0x02800000 | reg2.getIdx() << 16
+		   | reg1.getIdx() << 12 | imm);
 	}
 	void adds(const Operand& reg1, const Operand& reg2, const Operand& reg3)
 	{
@@ -402,7 +410,7 @@ public:
 #endif
 public:
 	CodeGenerator(size_t maxSize = DEFAULT_MAX_CODE_SIZE, void *userPtr = 0, Allocator *allocator = 0)
-		: CodeArray(maxSize, userPtr, allocator)
+		: CodeArray(maxSize, userPtr, allocator), cond_(AL)
 		, fp(Operand::FP), ip(Operand::IP), sp(Operand::SP)
 		, lr(Operand::LR), pc(Operand::PC), spW(Operand::SPW)
 		, r0(0), r1(1), r2(2), r3(3), r4(4), r5(5), r6(6), r7(7), r8(8), r9(9), r10(10), r11(11), r12(12), r13(13), r14(14), r15(15)
