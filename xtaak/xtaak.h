@@ -409,6 +409,20 @@ public:
 		dd(0xeeb80bc0 | dreg.getIdx() << 12 |
 		   (sreg.getIdx() & 1) << 5 | (sreg.getIdx() >> 1));
 	}
+	void flds(const Operand& sreg, const Operand& reg)
+	{
+		uint32 disp = reg.getDisp();
+		uint32 offset = 0x800000 | disp;
+		dd(0xed100a00 | (sreg.getIdx() & 1) << 23 | reg.getIdx() << 16 |
+		   (sreg.getIdx() >> 1) << 12 | offset);
+	}
+	void fldd(const Operand& dreg, const Operand& reg)
+	{
+		uint32 disp = reg.getDisp();
+		uint32 offset = 0x800000 | disp;
+		dd(0xed100b00 | reg.getIdx() << 16 |
+		   dreg.getIdx() << 12 | offset);
+	}
 	void fstd(const Operand& dreg, const Operand& reg)
 	{
 		uint32 disp = reg.getDisp();
