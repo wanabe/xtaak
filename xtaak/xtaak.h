@@ -376,6 +376,25 @@ public:
 	{
 		bvc(((int32)addr - (int32)getCurr() - 8) >> 2);
 	}
+#ifndef DISABLE_VFP
+	void fmsr(const Operand& sreg, const Operand& reg)
+	{
+		dd(0xee000a10 | (sreg.getIdx() >> 1) << 16 |
+		   reg.getIdx() << 12 | (sreg.getIdx() & 1) << 7);
+	}
+	void fsitod(const Operand& dreg, const Operand& sreg)
+	{
+		dd(0xeeb80bc0 | dreg.getIdx() << 12 |
+		   (sreg.getIdx() & 1) << 5 | (sreg.getIdx() >> 1));
+	}
+	void fstd(const Operand& dreg, const Operand& reg)
+	{
+		uint32 disp = reg.getDisp();
+		uint32 offset = 0x800000 | disp;
+		dd(0xed000b00 | reg.getIdx() << 16 |
+		   dreg.getIdx() << 12 | offset);
+	}
+#endif
 public:
 	CodeGenerator(size_t maxSize = DEFAULT_MAX_CODE_SIZE, void *userPtr = 0, Allocator *allocator = 0)
 		: CodeArray(maxSize, userPtr, allocator)
