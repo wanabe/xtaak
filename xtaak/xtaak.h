@@ -270,6 +270,21 @@ public:
 		dd(0xe2800000 | reg2.getIdx() << 16 | reg1.getIdx() << 12
 		   | imm);
 	}
+	void adds(const Operand& reg1, const Operand& reg2, const Operand& reg3)
+	{
+		if (!reg1.isREG() || !reg2.isREG()) { throw ERR_BAD_COMBINATION; }
+		if (!reg3.isREG() || reg3.getDisp() != 0) { throw ERR_NOT_IMPL; }
+		dd(0xe0900000 | reg2.getIdx() << 16 | reg1.getIdx() << 12
+		   | reg3.getIdx());
+	}
+	void adds(const Operand& reg1, const Operand& reg2, uint32 imm)
+	{
+		if (!reg1.isREG() || !reg2.isREG()) { throw ERR_BAD_COMBINATION; }
+		imm = inner::getShifterImm(imm);
+		if (!imm > 0x1000) { throw ERR_IMM_IS_TOO_BIG; }
+		dd(0xe2900000 | reg2.getIdx() << 16 | reg1.getIdx() << 12
+		   | imm);
+	}
 	void cmp(const Operand& reg, uint32 imm)
 	{
 		if (!reg.isREG()) { throw ERR_BAD_COMBINATION; }
