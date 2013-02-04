@@ -380,6 +380,15 @@ public:
 	{
 		beq(((int32)addr - (int32)getCurr() - 8) >> 2);
 	}
+	void bne(const int imm)
+	{
+		if (imm < -0x800000 || imm > 0x7fffff) { throw ERR_IMM_IS_TOO_BIG; }
+		dd(0x1a000000 | ((const uint32)imm & 0xffffff));
+	}
+	void bne(const void *addr)
+	{
+		bne(((int32)addr - (int32)getCurr() - 8) >> 2);
+	}
 	void bvc(const int imm)
 	{
 		if (imm < -0x800000 || imm > 0x7fffff) { throw ERR_IMM_IS_TOO_BIG; }
