@@ -245,9 +245,8 @@ public:
 	}
 	void mov(const Operand& reg1, const Operand& reg2)
 	{
-		if (reg1.isREG() && reg1.getIdx() == Operand::PC &&
-		    reg2.isREG() && reg2.getIdx() == Operand::LR) {
-			dd(0xe1a0f00e);
+		if (reg1.isREG() && reg2.isREG()) {
+			dd(0xe1a00000 | reg1.getIdx() << 12 | reg2.getIdx());
 		} else {
 			throw ERR_NOT_IMPL;
 		}
