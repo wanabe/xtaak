@@ -399,6 +399,11 @@ public:
 		bvc(((int32)addr - (int32)getCurr() - 8) >> 2);
 	}
 #ifndef DISABLE_VFP
+	void faddd(const Operand& dreg1, const Operand& dreg2, const Operand& dreg3)
+	{
+		dd(0xee300b00 | dreg2.getIdx() << 16 | dreg1.getIdx() << 12 |
+		   dreg3.getIdx());
+	}
 	void fcmpd(const Operand& dreg1, const Operand& dreg2)
 	{
 		dd(0xeeb40b40 | dreg1.getIdx() << 12 |
