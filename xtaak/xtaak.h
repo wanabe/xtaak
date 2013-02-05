@@ -99,7 +99,7 @@ private:
 	const uint32 disp_;
 public:
 	enum Kind {
-		NONE = 0,
+		NIL = 0,
 		REG = 1 << 1,
 		SFR = 1 << 2,
 		DFR = 1 << 3,
@@ -122,11 +122,15 @@ public:
 	bool isREG() const { return is(REG); }
 	bool isSFR() const { return is(SFR); }
 	bool isDFR() const { return is(DFR); }
+	bool isNIL() const { return !kind_; }
 	// any bit is accetable if bit == 0
 	bool is(int kind) const
 	{
 		return (kind_ & kind);
 	}
+};
+
+class Nil : public Operand {
 };
 
 class Reg : public Operand {
@@ -234,6 +238,7 @@ public:
 	enum Cond {
 		EQ = 0, NE, CS, CC, MI, PL, VS, VC, HI, LS, GE, LT, GT, LE, AL,
 	};
+	const Nil nil;
 	const Reg r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15;
 	const Reg fp, ip, sp, lr, pc, spW;
 	const SFReg s0, s1, s2;
@@ -243,13 +248,73 @@ public:
 	{
 		cond_ = cond;
 	}
+	void opReg(uint32 opcode, const Operand& regD, const Operand &regN,
+	           const Operand &regM, uint32 type = 0, uint32 imm = 0)
+	{
+		if (!regD.isREG() && !regD.isNIL()) { throw ERR_BAD_COMBINATION; }
+		if (!regN.isREG() && !regN.isNIL()) { throw ERR_BAD_COMBINATION; }
+		if (!regM.isREG() && !regM.isNIL()) { throw ERR_BAD_COMBINATION; }
+		if (imm > 31) { throw ERR_IMM_IS_TOO_BIG; }
+		dd(cond_ << 28 | opcode << 20 | regN.getIdx() << 16 |
+		   regD.getIdx() << 12 | imm << 7 | type << 5 | regM.getIdx());
+	}
+	void opImm(uint32 opcode, const Operand& regD, const Operand &regN,
+	           uint32 imm)
+	{
+		if (!regD.isREG() && !regD.isNIL()) { throw ERR_BAD_COMBINATION; }
+		if (!regN.isREG() && !regN.isNIL()) { throw ERR_BAD_COMBINATION; }
+		imm = inner::getShifterImm(imm);
+		if (!imm > 0x1000) { throw ERR_IMM_IS_TOO_BIG; }
+		dd(cond_ << 28 | opcode << 20 | regN.getIdx() << 16 |
+		   regD.getIdx() << 12 | imm);
+	}
+	void opImm16(uint32 opcode, const Operand& regD, uint32 imm)
+	{
+		if (!regD.isREG()) { throw ERR_BAD_COMBINATION; }
+		if (!inner::IsInUint16(imm)) { throw ERR_IMM_IS_TOO_BIG; }
+		dd(cond_ << 28 | opcode << 20 | (imm & 0xf000) << 4 |
+		   regD.getIdx() << 12 | (imm & 0xfff));
+	}
 	void mov(const Operand& reg1, const Operand& reg2)
 	{
-		if (reg1.isREG() && reg2.isREG()) {
-			dd(0xe1a00000 | reg1.getIdx() << 12 | reg2.getIdx());
-		} else {
-			throw ERR_NOT_IMPL;
-		}
+		opReg(0x1a, reg1, nil, reg2);
+	}
+	void movw(const Operand& reg, const uint32 imm)
+	{
+		opImm16(0x30, reg, imm);
+	}
+	void movt(const Operand& reg, const uint32 imm)
+	{
+		opImm16(0x34, reg, imm);
+	}
+	void mov32(const Operand& reg, const uint32 imm)
+	{
+		movw(reg, imm & 0xffff);
+		movt(reg, imm >> 16);
+	}
+	void add(const Operand& reg1, const Operand& reg2, const Operand& reg3)
+	{
+		opReg(0x08, reg1, reg2, reg3);
+	}
+	void add(const Operand& reg1, const Operand& reg2, uint32 imm)
+	{
+		opImm(0x28, reg1, reg2, imm);
+	}
+	void adds(const Operand& reg1, const Operand& reg2, const Operand& reg3)
+	{
+		opReg(0x09, reg1, reg2, reg3);
+	}
+	void adds(const Operand& reg1, const Operand& reg2, uint32 imm)
+	{
+		opImm(0x29, reg1, reg2, imm);
+	}
+	void cmp(const Operand& reg1, const Operand& reg2)
+	{
+		opReg(0x15, Operand(), reg1, reg2);
+	}
+	void cmp(const Operand& reg, uint32 imm)
+	{
+		opImm(0x35, Operand(), reg, imm);
 	}
 	void ldr(const Operand& reg1, const Operand& reg2)
 	{
@@ -268,67 +333,6 @@ public:
 		} else {
 			throw ERR_NOT_IMPL;
 		}
-	}
-	void movw(const Operand& reg, const uint32 imm)
-	{
-		if (!reg.isREG()) { throw ERR_BAD_COMBINATION; }
-		if (!inner::IsInUint16(imm)) { throw ERR_IMM_IS_TOO_BIG; }
-		dd(0xe3000000 | (imm & 0xf000) << 4 | reg.getIdx() << 12
-		   | (imm & 0xfff));
-	}
-	void movt(const Operand& reg, const uint32 imm)
-	{
-		if (!reg.isREG()) { throw ERR_BAD_COMBINATION; }
-		if (!inner::IsInUint16(imm)) { throw ERR_IMM_IS_TOO_BIG; }
-		dd(0xe3400000 | (imm & 0xf000) << 4 | reg.getIdx() << 12
-		   | (imm & 0xfff));
-	}
-	void mov32(const Operand& reg, const uint32 imm)
-	{
-		movw(reg, imm & 0xffff);
-		movt(reg, imm >> 16);
-	}
-	void add(const Operand& reg1, const Operand& reg2, const Operand& reg3)
-	{
-		if (!reg1.isREG() || !reg2.isREG()) { throw ERR_BAD_COMBINATION; }
-		if (!reg3.isREG() || reg3.getDisp() != 0) { throw ERR_NOT_IMPL; }
-		dd(0xe0800000 | reg2.getIdx() << 16 | reg1.getIdx() << 12
-		   | reg3.getIdx());
-	}
-	void add(const Operand& reg1, const Operand& reg2, uint32 imm)
-	{
-		if (!reg1.isREG() || !reg2.isREG()) { throw ERR_BAD_COMBINATION; }
-		imm = inner::getShifterImm(imm);
-		if (!imm > 0x1000) { throw ERR_IMM_IS_TOO_BIG; }
-		dd(cond_ << 28 | 0x02800000 | reg2.getIdx() << 16
-		   | reg1.getIdx() << 12 | imm);
-	}
-	void adds(const Operand& reg1, const Operand& reg2, const Operand& reg3)
-	{
-		if (!reg1.isREG() || !reg2.isREG()) { throw ERR_BAD_COMBINATION; }
-		if (!reg3.isREG() || reg3.getDisp() != 0) { throw ERR_NOT_IMPL; }
-		dd(0xe0900000 | reg2.getIdx() << 16 | reg1.getIdx() << 12
-		   | reg3.getIdx());
-	}
-	void adds(const Operand& reg1, const Operand& reg2, uint32 imm)
-	{
-		if (!reg1.isREG() || !reg2.isREG()) { throw ERR_BAD_COMBINATION; }
-		imm = inner::getShifterImm(imm);
-		if (!imm > 0x1000) { throw ERR_IMM_IS_TOO_BIG; }
-		dd(0xe2900000 | reg2.getIdx() << 16 | reg1.getIdx() << 12
-		   | imm);
-	}
-	void cmp(const Operand& reg1, const Operand& reg2)
-	{
-		if (!reg1.isREG() || !reg2.isREG()) { throw ERR_BAD_COMBINATION; }
-		dd(0xe1500000 | reg1.getIdx() << 16 | reg2.getIdx());
-	}
-	void cmp(const Operand& reg, uint32 imm)
-	{
-		if (!reg.isREG()) { throw ERR_BAD_COMBINATION; }
-		imm = inner::getShifterImm(imm);
-		if (!imm > 0x1000) { throw ERR_IMM_IS_TOO_BIG; }
-		dd(0xe3500000 | reg.getIdx() << 16 | imm);
 	}
 	void ldm(const Operand& reg1, const Operand& reg2,
 	         const Operand& reg3 = Reg(-1), const Operand& reg4 = Reg(-1),
@@ -446,7 +450,7 @@ public:
 #endif
 public:
 	CodeGenerator(size_t maxSize = DEFAULT_MAX_CODE_SIZE, void *userPtr = 0, Allocator *allocator = 0)
-		: CodeArray(maxSize, userPtr, allocator), cond_(AL)
+		: CodeArray(maxSize, userPtr, allocator), cond_(AL), nil()
 		, fp(Operand::FP), ip(Operand::IP), sp(Operand::SP)
 		, lr(Operand::LR), pc(Operand::PC), spW(Operand::SPW)
 		, r0(0), r1(1), r2(2), r3(3), r4(4), r5(5), r6(6), r7(7), r8(8), r9(9), r10(10), r11(11), r12(12), r13(13), r14(14), r15(15)
