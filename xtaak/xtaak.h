@@ -242,22 +242,23 @@ public:
 	{
 		cond_ = cond;
 	}
-	void opReg(uint32 opcode, const Reg& regD, const Reg &regN,
-	           const Reg &regM, uint32 type = 0, uint32 imm = 0)
+	void op(uint32 opcode, const Reg& regD, const Reg &regN,
+	        const Reg &regM)
 	{
+		uint32 type = 0, imm = 0; // Todo
 		if (imm > 31) { throw ERR_IMM_IS_TOO_BIG; }
 		dd(cond_ << 28 | opcode << 20 | regN.getIdx() << 16 |
 		   regD.getIdx() << 12 | imm << 7 | type << 5 | regM.getIdx());
 	}
-	void opImm(uint32 opcode, const Reg& regD, const Reg &regN,
-	           uint32 imm)
+	void op(uint32 opcode, const Reg& regD, const Reg &regN,
+	        uint32 imm)
 	{
 		imm = inner::getShifterImm(imm);
 		if (!imm >= 0x1000) { throw ERR_IMM_IS_TOO_BIG; }
 		dd(cond_ << 28 | opcode << 20 | regN.getIdx() << 16 |
 		   regD.getIdx() << 12 | imm);
 	}
-	void opImm16(uint32 opcode, const Reg& regD, uint32 imm)
+	void op(uint32 opcode, const Reg& regD, uint32 imm)
 	{
 		if (!inner::IsInUint16(imm)) { throw ERR_IMM_IS_TOO_BIG; }
 		dd(cond_ << 28 | opcode << 20 | (imm & 0xf000) << 4 |
@@ -275,7 +276,7 @@ public:
 		dd(cond_ << 28 | opcode << 20 | u | regN.getIdx() << 16 |
 		   regD.getIdx() << 12 | imm);
 	}
-	void opMemRegs(uint32 opcode, const Reg& regN, const Reg *regs)
+	void opMem(uint32 opcode, const Reg& regN, const Reg *regs)
 	{
 		uint32 bits = 0;
 		while (!regs->isNil()) { bits |= 1 << (regs++)->getIdx(); }
@@ -290,15 +291,15 @@ public:
 	}
 	void mov(const Reg& reg1, const Reg& reg2)
 	{
-		opReg(0x1a, reg1, nil, reg2);
+		op(0x1a, reg1, nil, reg2);
 	}
 	void movw(const Reg& reg, const uint32 imm)
 	{
-		opImm16(0x30, reg, imm);
+		op(0x30, reg, imm);
 	}
 	void movt(const Reg& reg, const uint32 imm)
 	{
-		opImm16(0x34, reg, imm);
+		op(0x34, reg, imm);
 	}
 	void mov32(const Reg& reg, const uint32 imm)
 	{
@@ -307,27 +308,27 @@ public:
 	}
 	void add(const Reg& reg1, const Reg& reg2, const Reg& reg3)
 	{
-		opReg(0x08, reg1, reg2, reg3);
+		op(0x08, reg1, reg2, reg3);
 	}
 	void add(const Reg& reg1, const Reg& reg2, uint32 imm)
 	{
-		opImm(0x28, reg1, reg2, imm);
+		op(0x28, reg1, reg2, imm);
 	}
 	void adds(const Reg& reg1, const Reg& reg2, const Reg& reg3)
 	{
-		opReg(0x09, reg1, reg2, reg3);
+		op(0x09, reg1, reg2, reg3);
 	}
 	void adds(const Reg& reg1, const Reg& reg2, uint32 imm)
 	{
-		opImm(0x29, reg1, reg2, imm);
+		op(0x29, reg1, reg2, imm);
 	}
 	void cmp(const Reg& reg1, const Reg& reg2)
 	{
-		opReg(0x15, nil, reg1, reg2);
+		op(0x15, nil, reg1, reg2);
 	}
 	void cmp(const Reg& reg, uint32 imm)
 	{
-		opImm(0x35, nil, reg, imm);
+		op(0x35, nil, reg, imm);
 	}
 	void ldr(const Reg& reg1, const Reg& reg2)
 	{
@@ -342,14 +343,14 @@ public:
 	         const Reg& reg5 = nil)
 	{
 		const Reg regs[] = {reg2, reg3, reg4, reg5, nil};
-		opMemRegs(0x89, reg1, regs);
+		opMem(0x89, reg1, regs);
 	}
 	void stm(const Reg& reg1, const Reg& reg2,
 	         const Reg& reg3 = nil, const Reg& reg4 = nil,
 	         const Reg& reg5 = nil)
 	{
 		const Reg regs[] = {reg2, reg3, reg4, reg5, nil};
-		opMemRegs(0x88, reg1, regs);
+		opMem(0x88, reg1, regs);
 	}
 	void b(const int32 imm)
 	{
@@ -392,30 +393,30 @@ public:
 		opJmp(((int32)addr - (int32)getCurr() - 8) >> 2, VC);
 	}
 #ifndef DISABLE_VFP
-	void fopDD(uint32 opcode, const DFReg& dregD, const DFReg& dregN, const DFReg& dregM)
+	void fop(uint32 opcode, const DFReg& dregD, const DFReg& dregN, const DFReg& dregM)
 	{
 		dd(cond_ << 28 | 0xe000b00 | (opcode >> 4) << 20 |
 		   dregN.getIdx() << 16 | dregD.getIdx() << 12 |
 		   (opcode & 0xf) << 4 | dregM.getIdx());
 	}
-	void fopSR(uint32 opcode, const SFReg& sregN, const Reg& regD)
+	void fop(uint32 opcode, const SFReg& sregN, const Reg& regD)
 	{
 		dd(cond_ << 28 | 0xe000a10 | opcode << 20 |
 		   (sregN.getIdx() >> 1) << 16 | regD.getIdx() << 12 |
 		   (sregN.getIdx() & 1) << 7);
 	}
-	void fopExtD(uint32 opcode, const DFReg& dregD, const DFReg& dregM)
+	void fopExt(uint32 opcode, const DFReg& dregD, const DFReg& dregM)
 	{
 		dd(cond_ << 28 | 0xeb00b00 | (opcode >> 4) << 16 |
 		   dregD.getIdx() << 12 | (opcode & 0xf) << 4 | dregM.getIdx());
 	}
-	void fopExtDS(uint32 opcode, const DFReg& dregD, const SFReg& sregM)
+	void fopExt(uint32 opcode, const DFReg& dregD, const SFReg& sregM)
 	{
 		dd(cond_ << 28 | 0xeb00b00 | (opcode >> 4) << 16 |
 		   dregD.getIdx() << 12 | (opcode & 0xf) << 4 |
 		   (sregM.getIdx() & 1) << 5 | (sregM.getIdx() >> 1));
 	}
-	void fopMemS(uint32 opcode, const SFReg& sregD, const Reg& regN)
+	void fopMem(uint32 opcode, const SFReg& sregD, const Reg& regN)
 	{
 		int disp = regN.getDisp();
 		uint32 offset = 0x800000 | disp;
@@ -423,7 +424,7 @@ public:
 		   (sregD.getIdx() & 1) << 23 | regN.getIdx() << 16 |
 		   (sregD.getIdx() >> 1) << 12 | offset);
 	}
-	void fopMemD(uint32 opcode, const DFReg& dregD, const Reg& regN)
+	void fopMem(uint32 opcode, const DFReg& dregD, const Reg& regN)
 	{
 		int disp = regN.getDisp();
 		uint32 offset = 0x800000 | disp;
@@ -432,35 +433,35 @@ public:
 	}
 	void faddd(const DFReg& dreg1, const DFReg& dreg2, const DFReg& dreg3)
 	{
-		fopDD(0x30, dreg1, dreg2, dreg3);
+		fop(0x30, dreg1, dreg2, dreg3);
 	}
 	void fcmpd(const DFReg& dreg1, const DFReg& dreg2)
 	{
-		fopExtD(0x44, dreg1, dreg2);
+		fopExt(0x44, dreg1, dreg2);
 	}
 	void fmsr(const SFReg& sreg, const Reg& reg)
 	{
-		fopSR(0x0, sreg, reg);
+		fop(0x0, sreg, reg);
 	}
 	void fmstat()
 	{
-		fopSR(0xf, fpscr, r15);
+		fop(0xf, fpscr, r15);
 	}
 	void fsitod(const DFReg& dreg, const SFReg& sreg)
 	{
-		fopExtDS(0x8c, dreg, sreg);
+		fopExt(0x8c, dreg, sreg);
 	}
 	void flds(const SFReg& sreg, const Reg& reg)
 	{
-		fopMemS(0x11, sreg, reg);
+		fopMem(0x11, sreg, reg);
 	}
 	void fldd(const DFReg& dreg, const Reg& reg)
 	{
-		fopMemD(0x11, dreg, reg);
+		fopMem(0x11, dreg, reg);
 	}
 	void fstd(const DFReg& dreg, const Reg& reg)
 	{
-		fopMemD(0x10, dreg, reg);
+		fopMem(0x10, dreg, reg);
 	}
 #endif
 public:
