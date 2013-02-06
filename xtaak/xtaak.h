@@ -151,9 +151,16 @@ public:
 
 #endif
 
-class Nil : public Reg, SFReg, DFReg {
+class Nil : public Reg
+#ifndef DISABLE_VFP
+                   , SFReg, DFReg
+#endif
+{
 public:
-	Nil() : Reg(0, true), SFReg(0), DFReg(0)
+	Nil() : Reg(0, true)
+#ifndef DISABLE_VFP
+	        , SFReg(0), DFReg(0)
+#endif
 	{
 	}
 };
