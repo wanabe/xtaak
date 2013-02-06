@@ -151,9 +151,9 @@ public:
 
 #endif
 
-class Nil : public Reg {
+class Nil : public Reg, SFReg, DFReg {
 public:
-	Nil() : Reg(0, true)
+	Nil() : Reg(0, true), SFReg(0), DFReg(0)
 	{
 	}
 };
