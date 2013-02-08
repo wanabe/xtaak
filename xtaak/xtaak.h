@@ -329,6 +329,10 @@ public:
 	{
 		op(0x29, reg1, reg2, imm);
 	}
+	void subs(const Reg& reg1, const Reg& reg2, uint32 imm)
+	{
+		op(0x25, reg1, reg2, imm);
+	}
 	void cmp(const Reg& reg1, const Reg& reg2)
 	{
 		op(0x15, nil, reg1, reg2);
@@ -441,6 +445,10 @@ public:
 	void faddd(const DFReg& dreg1, const DFReg& dreg2, const DFReg& dreg3)
 	{
 		fop(0x30, dreg1, dreg2, dreg3);
+	}
+	void fsubd(const DFReg& dreg1, const DFReg& dreg2, const DFReg& dreg3)
+	{
+		fop(0x34, dreg1, dreg2, dreg3);
 	}
 	void fcmpd(const DFReg& dreg1, const DFReg& dreg2)
 	{
