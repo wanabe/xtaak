@@ -496,6 +496,13 @@ public:
 		const Reg regs[] = {reg2, reg3, reg4, reg5, nil};
 		opMem(0x89, reg1, regs);
 	}
+	void ldmda(const Reg& reg1, const Reg& reg2,
+	           const Reg& reg3 = nil, const Reg& reg4 = nil,
+	           const Reg& reg5 = nil)
+	{
+		const Reg regs[] = {reg2, reg3, reg4, reg5, nil};
+		opMem(0x81, reg1, regs);
+	}
 	void pop(const Reg& reg1, const Reg& reg2 = nil,
 	         const Reg& reg3 = nil, const Reg& reg4 = nil,
 	         const Reg& reg5 = nil, const Reg& reg6 = nil)
