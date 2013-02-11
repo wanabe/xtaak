@@ -511,6 +511,10 @@ public:
 	{
 		opJmp(((int32)addr - (int32)getCurr() - 8) >> 2);
 	}
+	void bl(const void *addr)
+	{
+		opJmp(((int32)addr - (int32)getCurr() - 8) >> 2, NOCOND, true);
+	}
 	void bcc(const int imm)
 	{
 		opJmp(imm, CC);
