@@ -297,7 +297,7 @@ public:
 		: anonymousCount_(0)
 	{
 	}
-	void define(const char* label, const uint32 *addr, CodeArray *code)
+	void define(const char *label, const uint32 *addr, CodeArray *code)
 	{
 		std::string labelStr(label);
 		if (labelStr == "@@") {
@@ -311,7 +311,7 @@ public:
 		}
 		offsetTable_.erase(labelStr);
 	}
-	uint32 getOffset(const char* label, int bitOffset, uint32 bitLen,
+	uint32 getOffset(const char *label, int bitOffset, uint32 bitLen,
 	                 uint32 sign, const uint32 *base)
 	{
 		std::string labelStr(label);
@@ -342,7 +342,7 @@ public:
 	};
 private:
 	Label label_;
-	uint32 getOffset(const char* label, int bitOffset, uint32 bitLen,
+	uint32 getOffset(const char *label, int bitOffset, uint32 bitLen,
 	                 uint32 sign, const uint32 *base = NULL)
 	{
 		return label_.getOffset(label, bitOffset, bitLen, sign,
@@ -382,6 +382,12 @@ private:
 		dd(cond_ << 28 | opcode << 20 | u | regN.getIdx() << 16 |
 		   regD.getIdx() << 12 | imm);
 	}
+	void opMem(uint32 opcode, const Reg& regD, const char *label)
+	{
+		uint32 imm = getOffset(label, 0, 12, 1 << 23);
+		dd(cond_ << 28 | opcode << 20 | pc.getIdx() << 16 |
+		   regD.getIdx() << 12 | imm);
+	}
 	void opMem(uint32 opcode, const Reg& regN, const Reg *regs)
 	{
 		uint32 bits = 0;
@@ -405,7 +411,7 @@ public:
 	const DFReg d0, d1, d2;
 	const SFReg fpscr;
 #endif
-	void L(const char* label)
+	void L(const char *label)
 	{
 		label_.define(label, getCurr(), this);
 	}
@@ -461,6 +467,10 @@ public:
 	void ldr(const Reg& reg1, const Reg& reg2)
 	{
 		opMem(0x59, reg1, reg2);
+	}
+	void ldr(const Reg& reg, const char *label)
+	{
+		opMem(0x59, reg, label);
 	}
 	void str(const Reg& reg1, const Reg& reg2)
 	{
