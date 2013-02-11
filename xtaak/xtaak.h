@@ -461,6 +461,10 @@ public:
 	{
 		op(0x29, reg1, reg2, imm);
 	}
+	void sub(const Reg& reg1, const Reg& reg2, uint32 imm)
+	{
+		op(0x24, reg1, reg2, imm);
+	}
 	void subs(const Reg& reg1, const Reg& reg2, uint32 imm)
 	{
 		op(0x25, reg1, reg2, imm);
