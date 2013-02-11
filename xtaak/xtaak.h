@@ -496,12 +496,26 @@ public:
 		const Reg regs[] = {reg2, reg3, reg4, reg5, nil};
 		opMem(0x89, reg1, regs);
 	}
+	void pop(const Reg& reg1, const Reg& reg2 = nil,
+	         const Reg& reg3 = nil, const Reg& reg4 = nil,
+	         const Reg& reg5 = nil, const Reg& reg6 = nil)
+	{
+		const Reg regs[] = {reg1, reg2, reg3, reg4, reg5, reg6, nil};
+		opMem(0x8b, sp, regs);
+	}
 	void stm(const Reg& reg1, const Reg& reg2,
 	         const Reg& reg3 = nil, const Reg& reg4 = nil,
 	         const Reg& reg5 = nil)
 	{
 		const Reg regs[] = {reg2, reg3, reg4, reg5, nil};
 		opMem(0x88, reg1, regs);
+	}
+	void push(const Reg& reg1, const Reg& reg2 = nil,
+	          const Reg& reg3 = nil, const Reg& reg4 = nil,
+	          const Reg& reg5 = nil, const Reg& reg6 = nil)
+	{
+		const Reg regs[] = {reg1, reg2, reg3, reg4, reg5, reg6, nil};
+		opMem(0x92, sp, regs);
 	}
 	void b(const int32 imm)
 	{
