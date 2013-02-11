@@ -269,7 +269,7 @@ public:
 			return imm << bitOffset_ | sign;
 		} else {
 			sign = (1 << bitLen_) - 1;
-			if (imm < -sign / 2 - 1 || imm > sign / 2) {
+			if (imm < -(int)(sign / 2) - 1 || imm > (int)(sign / 2)) {
 				throw ERR_IMM_IS_TOO_BIG;
 			}
 			if (bitOffset_ < 0) {
@@ -343,7 +343,7 @@ public:
 private:
 	Label label_;
 	uint32 getOffset(const char *label, int bitOffset, uint32 bitLen,
-	                 uint32 sign, const uint32 *base = NULL)
+	                 uint32 sign = 0, const uint32 *base = NULL)
 	{
 		return label_.getOffset(label, bitOffset, bitLen, sign,
 		                        base ? base : getCurr());
@@ -400,6 +400,12 @@ private:
 		if (cond == NOCOND) { cond = cond_; }
 		dd(cond << 28 | 0xa000000 | (l ? 1 << 24 : 0) |
 		   ((const uint32)imm & 0xffffff));
+	}
+	void opJmp(const char *label, Cond cond = NOCOND, bool l = false)
+	{
+		if (cond == NOCOND) { cond = cond_; }
+		uint32 imm = getOffset(label, -2, 24);
+		dd(cond << 28 | 0xa000000 | (l ? 1 << 24 : 0) | imm);
 	}
 public:
 	const static Nil nil;
@@ -506,6 +512,10 @@ public:
 	{
 		opJmp(((int32)addr - (int32)getCurr() - 8) >> 2, CC);
 	}
+	void bcc(const char *label)
+	{
+		opJmp(label, CC);
+	}
 	void beq(const int imm)
 	{
 		opJmp(imm, EQ);
@@ -513,6 +523,10 @@ public:
 	void beq(const void *addr)
 	{
 		opJmp(((int32)addr - (int32)getCurr() - 8) >> 2, EQ);
+	}
+	void beq(const char *label)
+	{
+		opJmp(label, EQ);
 	}
 	void bne(const int imm)
 	{
@@ -522,6 +536,10 @@ public:
 	{
 		opJmp(((int32)addr - (int32)getCurr() - 8) >> 2, NE);
 	}
+	void bne(const char *label)
+	{
+		opJmp(label, NE);
+	}
 	void bvc(const int imm)
 	{
 		opJmp(imm, VC);
@@ -529,6 +547,10 @@ public:
 	void bvc(const void *addr)
 	{
 		opJmp(((int32)addr - (int32)getCurr() - 8) >> 2, VC);
+	}
+	void bvc(const char *label)
+	{
+		opJmp(label, VC);
 	}
 #ifndef DISABLE_VFP
 	void fop(uint32 opcode, const DFReg& dregD, const DFReg& dregN, const DFReg& dregM)
