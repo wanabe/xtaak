@@ -7,6 +7,9 @@
 #include <unistd.h>
 #include <stdint.h>
 
+#include <string>
+#include <map>
+
 namespace Xtaak {
 
 enum {
@@ -26,6 +29,7 @@ enum Error {
 	ERR_NONE = 0,
 	ERR_BAD_COMBINATION,
 	ERR_IMM_IS_TOO_BIG,
+	ERR_LABEL_IS_REDEFINED,
 	ERR_CANT_PROTECT,
 	ERR_CANT_ALLOC,
 	ERR_NOT_IMPL,
@@ -38,6 +42,7 @@ inline const char *ConvertErrorToString(Error err)
 		"none",
 		"bad combination",
 		"imm is too big",
+		"label is redefined",
 		"can't protect",
 		"can't alloc",
 		"not implemented yet",
@@ -229,6 +234,105 @@ public:
 	{
 		top_[size_++] = code;
 	}
+	void ddOr(uint32 code, const uint32 *addr)
+	{
+		size_t idx = addr - top_;
+		if (idx >= size_) { throw ERR_INTERNAL; }
+		top_[idx] |= code;
+	}
+};
+
+class Offset {
+	const int bitOffset_;
+	const uint32 bitLen_;
+	const uint32 sign_;
+	const uint32 *base_;
+public:
+	Offset(int bitOffset, uint32 bitLen, uint32 sign, const uint32 *base)
+		: bitOffset_(bitOffset)
+		, bitLen_(bitLen)
+		, sign_(sign)
+		, base_(base)
+	{
+	}
+	uint32 getImm(const uint32 *addr) const
+	{
+		int imm = (addr - base_) * 4 - 8;
+		uint32 sign = sign_;
+		if (sign) {
+			if (imm < 0) {
+				imm = -imm;
+			} else {
+				sign = 0;
+			}
+			if (imm >= 1 << bitLen_) { throw ERR_IMM_IS_TOO_BIG; }
+			return imm << bitOffset_ | sign;
+		} else {
+			sign = (1 << bitLen_) - 1;
+			if (imm < -sign / 2 - 1 || imm > sign / 2) {
+				throw ERR_IMM_IS_TOO_BIG;
+			}
+			if (bitOffset_ < 0) {
+				imm >>= -bitOffset_;
+			} else {
+				imm <<= bitOffset_;
+			}
+			return imm & sign;
+		}
+	}
+	const uint32 *getBase() const
+	{
+		return base_;
+	}
+};
+
+class Label {
+	typedef std::map<std::string, const uint32 *> LabelTable;
+	typedef std::multimap<std::string, const Offset> OffsetTable;
+	LabelTable labelTable_;
+	OffsetTable offsetTable_;
+	uint32 anonymousCount_;
+public:
+	Label()
+		: anonymousCount_(0)
+	{
+	}
+	void define(const char* label, const uint32 *addr, CodeArray *code)
+	{
+		std::string labelStr(label);
+		if (labelStr == "@@") {
+			labelStr += toStr(++anonymousCount_);
+		}
+		std::pair<LabelTable::iterator, bool> ret = labelTable_.insert(LabelTable::value_type(labelStr, addr));
+		OffsetTable::iterator itr;
+		OffsetTable::iterator tail = offsetTable_.end();
+		for(itr = offsetTable_.find(labelStr); itr != tail; itr++) {
+			code->ddOr(itr->second.getImm(addr), itr->second.getBase());
+		}
+		offsetTable_.erase(labelStr);
+	}
+	uint32 getOffset(const char* label, int bitOffset, uint32 bitLen,
+	                 uint32 sign, const uint32 *base)
+	{
+		std::string labelStr(label);
+		Offset offset(bitOffset, bitLen, sign, base);
+		if (labelStr == "@f" || labelStr == "@F") {
+			labelStr = std::string("@@") + toStr(anonymousCount_ + 1);
+		} else if (labelStr == "@b" || labelStr == "@B") {
+			labelStr = std::string("@@") + toStr(anonymousCount_);
+		}
+		LabelTable::iterator itr = labelTable_.find(labelStr);
+		LabelTable::iterator tail = labelTable_.end();
+		if (itr != tail) { return offset.getImm(itr->second); }
+		offsetTable_.insert(OffsetTable::value_type(labelStr, offset));
+		return 0;
+	}
+	static inline std::string toStr(int num)
+	{
+		char buf[16];
+		snprintf(buf, sizeof(buf), ".%08x", num);
+		return buf;
+	}
 };
 
 class CodeGenerator : public CodeArray {
@@ -237,6 +341,13 @@ public:
 		NOCOND = -1, EQ = 0, NE, CS, CC, MI, PL, VS, VC, HI, LS, GE, LT, GT, LE, AL,
 	};
 private:
+	Label label_;
+	uint32 getOffset(const char* label, int bitOffset, uint32 bitLen,
+	                 uint32 sign, const uint32 *base = NULL)
+	{
+		return label_.getOffset(label, bitOffset, bitLen, sign,
+		                        base ? base : getCurr());
+	}
 	void op(uint32 opcode, const Reg& regD, const Reg &regN,
 	        const Reg &regM)
 	{
@@ -294,6 +405,10 @@ public:
 	const DFReg d0, d1, d2;
 	const SFReg fpscr;
 #endif
+	void L(const char* label)
+	{
+		label_.define(label, getCurr(), this);
+	}
 	void setCond(const Cond cond)
 	{
 		cond_ = cond;
