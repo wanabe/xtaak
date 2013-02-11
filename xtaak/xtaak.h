@@ -107,6 +107,10 @@ private:
 	{
 		return Reg(r, r.getDisp() + disp);
 	}
+	friend Reg operator-(const Reg& r, int disp)
+	{
+		return Reg(r, r.getDisp() - disp);
+	}
 public:
 	enum Code {
 		R0 = 0, R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15,
@@ -262,7 +266,6 @@ public:
 		if (sign) {
 			if (imm < 0) {
 				imm = -imm;
-			} else {
 				sign = 0;
 			}
 			if (imm >= 1 << bitLen_) { throw ERR_IMM_IS_TOO_BIG; }
@@ -372,11 +375,11 @@ private:
 	}
 	void opMem(uint32 opcode, const Reg& regD, const Reg& regN)
 	{
-		uint32 u = 0;
+		uint32 u = 1 << 23;
 		int imm = regN.getDisp();
 		if (imm < 0)  {
 			imm = -imm;
-			u = 1 << 23;
+			u = 0;
 		}
 		if (imm >= 0x1000) { throw ERR_IMM_IS_TOO_BIG; }
 		dd(cond_ << 28 | opcode << 20 | u | regN.getIdx() << 16 |
@@ -472,15 +475,15 @@ public:
 	}
 	void ldr(const Reg& reg1, const Reg& reg2)
 	{
-		opMem(0x59, reg1, reg2);
+		opMem(0x51, reg1, reg2);
 	}
 	void ldr(const Reg& reg, const char *label)
 	{
-		opMem(0x59, reg, label);
+		opMem(0x51, reg, label);
 	}
 	void str(const Reg& reg1, const Reg& reg2)
 	{
-		opMem(0x58, reg1, reg2);
+		opMem(0x50, reg1, reg2);
 	}
 	void ldm(const Reg& reg1, const Reg& reg2,
 	         const Reg& reg3 = nil, const Reg& reg4 = nil,
