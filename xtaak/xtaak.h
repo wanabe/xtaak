@@ -449,17 +449,21 @@ public:
 	{
 		op(0x08, reg1, reg2, reg3);
 	}
-	void add(const Reg& reg1, const Reg& reg2, uint32 imm)
-	{
-		op(0x28, reg1, reg2, imm);
-	}
 	void adds(const Reg& reg1, const Reg& reg2, const Reg& reg3)
 	{
 		op(0x09, reg1, reg2, reg3);
 	}
+	void add(const Reg& reg1, const Reg& reg2, uint32 imm)
+	{
+		op(0x28, reg1, reg2, imm);
+	}
 	void adds(const Reg& reg1, const Reg& reg2, uint32 imm)
 	{
 		op(0x29, reg1, reg2, imm);
+	}
+	void subs(const Reg& reg1, const Reg& reg2, const Reg& reg3)
+	{
+		op(0x05, reg1, reg2, reg3);
 	}
 	void sub(const Reg& reg1, const Reg& reg2, uint32 imm)
 	{
