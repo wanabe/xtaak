@@ -247,41 +247,51 @@ public:
 };
 
 class Offset {
-	const int bitOffset_;
+	const uint32 *base_;
 	const uint32 bitLen_;
 	const uint32 sign_;
-	const uint32 *base_;
+	const int bitOffset1_;
+	const uint32 bitMask1_;
+	const int bitOffset2_;
+	const uint32 bitMask2_;
+private:
+	static inline uint32 pickBit(int32 offset, int bitOffset, uint32 bitMask)
+	{
+		uint32 imm = ((uint32)offset) & bitMask;
+		return bitOffset < 0 ? imm >> -bitOffset : imm << bitOffset;
+	}
 public:
-	Offset(int bitOffset, uint32 bitLen, uint32 sign, const uint32 *base)
-		: bitOffset_(bitOffset)
+	Offset(const uint32 *base, uint32 bitLen, uint32 sign, int bitOffset1,
+	       uint32 bitMask1, int bitOffset2, uint32 bitMask2)
+		: base_(base)
 		, bitLen_(bitLen)
 		, sign_(sign)
-		, base_(base)
+		, bitOffset1_(bitOffset1)
+		, bitMask1_(bitMask1)
+		, bitOffset2_(bitOffset2)
+		, bitMask2_(bitMask2)
 	{
 	}
 	uint32 getImm(const uint32 *addr) const
 	{
-		int imm = (addr - base_) * 4 - 8;
+		int offset = (addr - base_) * 4 - 8;
 		uint32 sign = sign_;
 		if (sign) {
-			if (imm < 0) {
-				imm = -imm;
+			if (offset < 0) {
+				offset = -offset;
 				sign = 0;
 			}
-			if (imm >= 1 << bitLen_) { throw ERR_IMM_IS_TOO_BIG; }
-			return imm << bitOffset_ | sign;
+			if (offset >= 1 << bitLen_) { throw ERR_IMM_IS_TOO_BIG; }
 		} else {
 			sign = (1 << bitLen_) - 1;
-			if (imm < -(int)(sign / 2) - 1 || imm > (int)(sign / 2)) {
+			if (offset < -(int)(sign / 2) - 1 || offset > (int)(sign / 2)) {
 				throw ERR_IMM_IS_TOO_BIG;
 			}
-			if (bitOffset_ < 0) {
-				imm >>= -bitOffset_;
-			} else {
-				imm <<= bitOffset_;
-			}
-			return imm & sign;
+			offset &= sign;
+			sign = 0;
 		}
+		return sign | pickBit(offset, bitOffset1_, bitMask1_)
+		       | pickBit(offset, bitOffset2_, bitMask2_);
 	}
 	const uint32 *getBase() const
 	{
@@ -314,11 +324,13 @@ public:
 		}
 		offsetTable_.erase(labelStr);
 	}
-	uint32 getOffset(const char *label, int bitOffset, uint32 bitLen,
-	                 uint32 sign, const uint32 *base)
+	uint32 getOffset(const char *label, const uint32 *base, uint32 bitLen,
+	                 uint32 sign, int bitOffset1, uint32 bitMask1,
+	                 int bitOffset2, uint32 bitMask2)
 	{
 		std::string labelStr(label);
-		Offset offset(bitOffset, bitLen, sign, base);
+		Offset offset(base, bitLen, sign, bitOffset1, bitMask1,
+		              bitOffset2, bitMask2);
 		if (labelStr == "@f" || labelStr == "@F") {
 			labelStr = std::string("@@") + toStr(anonymousCount_ + 1);
 		} else if (labelStr == "@b" || labelStr == "@B") {
@@ -345,11 +357,12 @@ public:
 	};
 private:
 	Label label_;
-	uint32 getOffset(const char *label, int bitOffset, uint32 bitLen,
-	                 uint32 sign = 0, const uint32 *base = NULL)
+	uint32 getOffset(const char *label, uint32 bitLen, uint32 sign,
+	                 int bitOffset1 = 0, uint32 bitMask1 = 0xffffffff,
+	                 int bitOffset2 = 0, uint32 bitMask2 = 0)
 	{
-		return label_.getOffset(label, bitOffset, bitLen, sign,
-		                        base ? base : getCurr());
+		return label_.getOffset(label, getCurr(), bitLen, sign,
+		                        bitOffset1, bitMask1, bitOffset2, bitMask2);
 	}
 	void op(uint32 opcode, const Reg& regD, const Reg &regN,
 	        const Reg &regM)
@@ -385,9 +398,16 @@ private:
 		dd(cond_ << 28 | opcode << 20 | u | regN.getIdx() << 16 |
 		   regD.getIdx() << 12 | imm);
 	}
+	void opMem(uint32 opcode1, uint32 opcode2, const Reg& regD,
+	           const char *label)
+	{
+		uint32 imm = getOffset(label, 8, 1 << 23, 4, 0xf0, 0, 0xf);
+		dd(cond_ << 28 | (opcode1 | 0x14) << 20 | pc.getIdx() << 16 |
+		   regD.getIdx() << 12 | opcode2 << 4 | imm);
+	}
 	void opMem(uint32 opcode, const Reg& regD, const char *label)
 	{
-		uint32 imm = getOffset(label, 0, 12, 1 << 23);
+		uint32 imm = getOffset(label, 12, 1 << 23);
 		dd(cond_ << 28 | opcode << 20 | pc.getIdx() << 16 |
 		   regD.getIdx() << 12 | imm);
 	}
@@ -407,7 +427,7 @@ private:
 	void opJmp(const char *label, Cond cond = NOCOND, bool l = false)
 	{
 		if (cond == NOCOND) { cond = cond_; }
-		uint32 imm = getOffset(label, -2, 24);
+		uint32 imm = getOffset(label, 24, 0, -2);
 		dd(cond << 28 | 0xa000000 | (l ? 1 << 24 : 0) | imm);
 	}
 public:
@@ -492,6 +512,10 @@ public:
 	void str(const Reg& reg1, const Reg& reg2)
 	{
 		opMem(0x50, reg1, reg2);
+	}
+	void ldrd(const Reg& reg, const char *label)
+	{
+		opMem(0x0, 0xd, reg, label);
 	}
 	void ldm(const Reg& reg1, const Reg& reg2,
 	         const Reg& reg3 = nil, const Reg& reg4 = nil,
