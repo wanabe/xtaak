@@ -403,6 +403,19 @@ private:
 		   regD.getIdx() << 12 | imm);
 	}
 	void opMem(uint32 opcode1, uint32 opcode2, const Reg& regD,
+	           const Reg& regN)
+	{
+		uint32 u = 1 << 23;
+		int imm = regN.getDisp();
+		if (imm < 0)  {
+			imm = -imm;
+			u = 0;
+		}
+		if (imm >= 0x100) { throw ERR_IMM_IS_TOO_BIG; }
+		dd(cond_ << 28 | (opcode1 | 0x14) << 20 | u | regN.getIdx() << 16 |
+		   regD.getIdx() << 12 | opcode2 << 4 | (imm & 0xf0) << 4 | (imm & 0xf));
+	}
+	void opMem(uint32 opcode1, uint32 opcode2, const Reg& regD,
 	           const char *label)
 	{
 		uint32 imm = getOffset(label, 8, 1 << 23, 4, 0xf0, 0, 0xf);
@@ -519,9 +532,17 @@ public:
 	{
 		opMem(0x50, reg1, reg2);
 	}
+	void ldrd(const Reg& reg1, const Reg& reg2)
+	{
+		opMem(0x0, 0xd, reg1, reg2);
+	}
 	void ldrd(const Reg& reg, const char *label)
 	{
 		opMem(0x0, 0xd, reg, label);
+	}
+	void strd(const Reg& reg1, const Reg& reg2)
+	{
+		opMem(0x0, 0xf, reg1, reg2);
 	}
 	void ldm(const Reg& reg1, const Reg& reg2,
 	         const Reg& reg3 = nil, const Reg& reg4 = nil,
