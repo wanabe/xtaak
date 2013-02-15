@@ -84,6 +84,10 @@ uint32 getShifterImm(uint32 x) {
 	return shift | x;
 }
 
+bool isShifterImm(uint32 x) {
+	return getShifterImm(x) < 0x1000;
+}
+
 } // inner
 
 /*
