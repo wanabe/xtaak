@@ -463,7 +463,9 @@ public:
 	void mov32(const Reg& reg, const uint32 imm)
 	{
 		movw(reg, imm & 0xffff);
-		movt(reg, imm >> 16);
+		if (imm >> 16) {
+			movt(reg, imm >> 16);
+		}
 	}
 	void add(const Reg& reg1, const Reg& reg2, const Reg& reg3)
 	{
