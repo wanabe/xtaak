@@ -625,6 +625,12 @@ public:
 		   (sregN.getIdx() >> 1) << 16 | regD.getIdx() << 12 |
 		   (sregN.getIdx() & 1) << 7);
 	}
+	void fop(uint32 opcode, const DFReg& dregM, const Reg& regD, const Reg& regN)
+	{
+		dd(cond_ << 28 | 0xc400b10 | (opcode >> 4) << 20 |
+		   regN.getIdx() << 16 | regD.getIdx() << 12 |
+		   dregM.getIdx());
+	}
 	void fopExt(uint32 opcode, const DFReg& dregD, const DFReg& dregM)
 	{
 		dd(cond_ << 28 | 0xeb00b00 | (opcode >> 4) << 16 |
@@ -666,6 +672,10 @@ public:
 	void fmsr(const SFReg& sreg, const Reg& reg)
 	{
 		fop(0x0, sreg, reg);
+	}
+	void fmdrr(const DFReg& dreg, const Reg& reg1, const Reg& reg2)
+	{
+		fop(0x0, dreg, reg1, reg2);
 	}
 	void fmstat()
 	{
