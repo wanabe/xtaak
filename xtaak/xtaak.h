@@ -321,6 +321,7 @@ public:
 			labelStr += toStr(++anonymousCount_);
 		}
 		std::pair<LabelTable::iterator, bool> ret = labelTable_.insert(LabelTable::value_type(labelStr, addr));
+		if (!ret.second) { throw ERR_LABEL_IS_REDEFINED; }
 		OffsetTable::iterator itr;
 		OffsetTable::iterator tail = offsetTable_.end();
 		for(itr = offsetTable_.find(labelStr); itr != tail; itr++) {
@@ -727,10 +728,11 @@ public:
 #endif
 public:
 	CodeGenerator(size_t maxSize = DEFAULT_MAX_CODE_SIZE, void *userPtr = 0, Allocator *allocator = 0)
-		: CodeArray(maxSize, userPtr, allocator), cond_(AL)
+		: CodeArray(maxSize, userPtr, allocator)
+		, r0(0), r1(1), r2(2), r3(3), r4(4), r5(5), r6(6), r7(7), r8(8), r9(9), r10(10), r11(11), r12(12), r13(13), r14(14), r15(15)
 		, fp(Reg::FP), ip(Reg::IP), sp(Reg::SP)
 		, lr(Reg::LR), pc(Reg::PC), spW(Reg::SPW)
-		, r0(0), r1(1), r2(2), r3(3), r4(4), r5(5), r6(6), r7(7), r8(8), r9(9), r10(10), r11(11), r12(12), r13(13), r14(14), r15(15)
+		, cond_(AL)
 #ifndef DISABLE_VFP
 		, s0(0), s1(1), s2(2)
 		, d0(0), d1(1), d2(2)
