@@ -182,6 +182,11 @@ public:
 void *const AutoGrow = (void*)1;
 
 class CodeArray {
+public:
+	enum Cond {
+		NOCOND = -1, EQ = 0, NE, CS, CC, MI, PL, VS, VC, HI, LS, GE, LT, GT, LE, AL,
+	};
+private:
 	enum {
 		MAX_FIXED_BUF_SIZE = 8
 	};
@@ -203,6 +208,7 @@ class CodeArray {
 	Allocator defaultAllocator_;
 	Allocator *alloc_;
 	uint32 buf_[MAX_FIXED_BUF_SIZE]; // for FIXED_BUF
+	Cond cond_;
 protected:
 	size_t maxSize_;
 	uint32 *top_;
@@ -212,6 +218,7 @@ public:
 	CodeArray(size_t maxSize = MAX_FIXED_BUF_SIZE, void *userPtr = 0, Allocator *allocator = 0)
 	: type_(getType(maxSize, userPtr))
 	, alloc_(allocator ? allocator : &defaultAllocator_)
+	, cond_(AL)
 	, maxSize_(maxSize)
 	, top_(isAllocType() ? alloc_->alloc(maxSize) : type_ == USER_BUF ? reinterpret_cast<uint32*>(userPtr) : buf_)
 	, size_(0)
@@ -229,6 +236,14 @@ public:
 			alloc_->free(top_);
 		}
 	}
+	void setCond(const Cond cond)
+	{
+		cond_ = cond;
+	}
+	Cond getCond()
+	{
+		return cond_;
+	}
 	const uint32 *getCurr() const { return &top_[size_]; }
 	static inline bool protect(const void *addr, size_t size, bool canExec)
 	{
@@ -241,6 +256,10 @@ public:
 	void dd(uint32 code)
 	{
 		top_[size_++] = code;
+	}
+	void ddOp(uint32 code)
+	{
+		top_[size_++] = code | cond_ << 28;
 	}
 	void ddOr(uint32 code, const uint32 *addr)
 	{
@@ -357,9 +376,6 @@ public:
 
 class CodeGenerator : public CodeArray {
 public:
-	enum Cond {
-		NOCOND = -1, EQ = 0, NE, CS, CC, MI, PL, VS, VC, HI, LS, GE, LT, GT, LE, AL,
-	};
 private:
 	Label label_;
 	uint32 getOffset(const char *label, uint32 bitLen, uint32 sign,
@@ -374,22 +390,22 @@ private:
 	{
 		uint32 type = 0, imm = 0; // Todo
 		if (imm > 31) { throw ERR_IMM_IS_TOO_BIG; }
-		dd(cond_ << 28 | opcode << 20 | regN.getIdx() << 16 |
-		   regD.getIdx() << 12 | imm << 7 | type << 5 | regM.getIdx());
+		ddOp(opcode << 20 | regN.getIdx() << 16 |
+		     regD.getIdx() << 12 | imm << 7 | type << 5 | regM.getIdx());
 	}
 	void op(uint32 opcode, const Reg& regD, const Reg &regN,
 	        uint32 imm)
 	{
 		imm = inner::getShifterImm(imm);
 		if (!imm >= 0x1000) { throw ERR_IMM_IS_TOO_BIG; }
-		dd(cond_ << 28 | opcode << 20 | regN.getIdx() << 16 |
-		   regD.getIdx() << 12 | imm);
+		ddOp(opcode << 20 | regN.getIdx() << 16 |
+		     regD.getIdx() << 12 | imm);
 	}
 	void op(uint32 opcode, const Reg& regD, uint32 imm)
 	{
 		if (!inner::IsInUint16(imm)) { throw ERR_IMM_IS_TOO_BIG; }
-		dd(cond_ << 28 | opcode << 20 | (imm & 0xf000) << 4 |
-		   regD.getIdx() << 12 | (imm & 0xfff));
+		ddOp(opcode << 20 | (imm & 0xf000) << 4 |
+		     regD.getIdx() << 12 | (imm & 0xfff));
 	}
 	void opMem(uint32 opcode, const Reg& regD, const Reg& regN)
 	{
@@ -400,8 +416,8 @@ private:
 			u = 0;
 		}
 		if (imm >= 0x1000) { throw ERR_IMM_IS_TOO_BIG; }
-		dd(cond_ << 28 | opcode << 20 | u | regN.getIdx() << 16 |
-		   regD.getIdx() << 12 | imm);
+		ddOp(opcode << 20 | u | regN.getIdx() << 16 |
+		     regD.getIdx() << 12 | imm);
 	}
 	void opMem(uint32 opcode1, uint32 opcode2, const Reg& regD,
 	           const Reg& regN)
@@ -413,38 +429,38 @@ private:
 			u = 0;
 		}
 		if (imm >= 0x100) { throw ERR_IMM_IS_TOO_BIG; }
-		dd(cond_ << 28 | (opcode1 | 0x14) << 20 | u | regN.getIdx() << 16 |
-		   regD.getIdx() << 12 | opcode2 << 4 | (imm & 0xf0) << 4 | (imm & 0xf));
+		ddOp((opcode1 | 0x14) << 20 | u | regN.getIdx() << 16 |
+		     regD.getIdx() << 12 | opcode2 << 4 | (imm & 0xf0) << 4 | (imm & 0xf));
 	}
 	void opMem(uint32 opcode1, uint32 opcode2, const Reg& regD,
 	           const char *label)
 	{
 		uint32 imm = getOffset(label, 8, 1 << 23, 4, 0xf0, 0, 0xf);
-		dd(cond_ << 28 | (opcode1 | 0x14) << 20 | pc.getIdx() << 16 |
-		   regD.getIdx() << 12 | opcode2 << 4 | imm);
+		ddOp((opcode1 | 0x14) << 20 | pc.getIdx() << 16 |
+		     regD.getIdx() << 12 | opcode2 << 4 | imm);
 	}
 	void opMem(uint32 opcode, const Reg& regD, const char *label)
 	{
 		uint32 imm = getOffset(label, 12, 1 << 23);
-		dd(cond_ << 28 | opcode << 20 | pc.getIdx() << 16 |
-		   regD.getIdx() << 12 | imm);
+		ddOp(opcode << 20 | pc.getIdx() << 16 |
+		     regD.getIdx() << 12 | imm);
 	}
 	void opMem(uint32 opcode, const Reg& regN, const Reg *regs)
 	{
 		uint32 bits = 0;
 		while (!regs->isNil()) { bits |= 1 << (regs++)->getIdx(); }
-		dd(cond_ << 28 | opcode << 20 | regN.getIdx() << 16 | bits);
+		ddOp(opcode << 20 | regN.getIdx() << 16 | bits);
 	}
 	void opJmp(const int32 imm, Cond cond = NOCOND, bool l = false)
 	{
 		if (imm < -0x800000 || imm > 0x7fffff) { throw ERR_IMM_IS_TOO_BIG; }
-		if (cond == NOCOND) { cond = cond_; }
+		if (cond == NOCOND) { cond = getCond(); }
 		dd(cond << 28 | 0xa000000 | (l ? 1 << 24 : 0) |
 		   ((const uint32)imm & 0xffffff));
 	}
 	void opJmp(const char *label, Cond cond = NOCOND, bool l = false)
 	{
-		if (cond == NOCOND) { cond = cond_; }
+		if (cond == NOCOND) { cond = getCond(); }
 		uint32 imm = getOffset(label, 24, 0, -2);
 		dd(cond << 28 | 0xa000000 | (l ? 1 << 24 : 0) | imm);
 	}
@@ -452,7 +468,6 @@ public:
 	const static Nil nil;
 	const Reg r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15;
 	const Reg fp, ip, sp, lr, pc, spW;
-	Cond cond_;
 #ifndef DISABLE_VFP
 	const SFReg s0, s1, s2;
 	const DFReg d0, d1, d2;
@@ -461,10 +476,6 @@ public:
 	void L(const char *label)
 	{
 		label_.define(label, getCurr(), this);
-	}
-	void setCond(const Cond cond)
-	{
-		cond_ = cond;
 	}
 	void mov(const Reg& reg1, const Reg& reg2)
 	{
@@ -643,47 +654,47 @@ public:
 #ifndef DISABLE_VFP
 	void fop(uint32 opcode, const DFReg& dregD, const DFReg& dregN, const DFReg& dregM)
 	{
-		dd(cond_ << 28 | 0xe000b00 | (opcode >> 4) << 20 |
-		   dregN.getIdx() << 16 | dregD.getIdx() << 12 |
-		   (opcode & 0xf) << 4 | dregM.getIdx());
+		ddOp(0xe000b00 | (opcode >> 4) << 20 |
+		     dregN.getIdx() << 16 | dregD.getIdx() << 12 |
+		     (opcode & 0xf) << 4 | dregM.getIdx());
 	}
 	void fop(uint32 opcode, const SFReg& sregN, const Reg& regD)
 	{
-		dd(cond_ << 28 | 0xe000a10 | opcode << 20 |
-		   (sregN.getIdx() >> 1) << 16 | regD.getIdx() << 12 |
-		   (sregN.getIdx() & 1) << 7);
+		ddOp(0xe000a10 | opcode << 20 |
+		     (sregN.getIdx() >> 1) << 16 | regD.getIdx() << 12 |
+		     (sregN.getIdx() & 1) << 7);
 	}
 	void fop(uint32 opcode, const DFReg& dregM, const Reg& regD, const Reg& regN)
 	{
-		dd(cond_ << 28 | 0xc400b10 | (opcode >> 4) << 20 |
-		   regN.getIdx() << 16 | regD.getIdx() << 12 |
-		   dregM.getIdx());
+		ddOp(0xc400b10 | (opcode >> 4) << 20 |
+		     regN.getIdx() << 16 | regD.getIdx() << 12 |
+		     dregM.getIdx());
 	}
 	void fopExt(uint32 opcode, const DFReg& dregD, const DFReg& dregM)
 	{
-		dd(cond_ << 28 | 0xeb00b00 | (opcode >> 4) << 16 |
-		   dregD.getIdx() << 12 | (opcode & 0xf) << 4 | dregM.getIdx());
+		ddOp(0xeb00b00 | (opcode >> 4) << 16 |
+		     dregD.getIdx() << 12 | (opcode & 0xf) << 4 | dregM.getIdx());
 	}
 	void fopExt(uint32 opcode, const DFReg& dregD, const SFReg& sregM)
 	{
-		dd(cond_ << 28 | 0xeb00b00 | (opcode >> 4) << 16 |
-		   dregD.getIdx() << 12 | (opcode & 0xf) << 4 |
-		   (sregM.getIdx() & 1) << 5 | (sregM.getIdx() >> 1));
+		ddOp(0xeb00b00 | (opcode >> 4) << 16 |
+		     dregD.getIdx() << 12 | (opcode & 0xf) << 4 |
+		     (sregM.getIdx() & 1) << 5 | (sregM.getIdx() >> 1));
 	}
 	void fopMem(uint32 opcode, const SFReg& sregD, const Reg& regN)
 	{
 		int disp = regN.getDisp();
 		uint32 offset = 0x800000 | disp;
-		dd(cond_ << 28 | 0xc000a00 | opcode << 20 |
-		   (sregD.getIdx() & 1) << 23 | regN.getIdx() << 16 |
-		   (sregD.getIdx() >> 1) << 12 | offset);
+		ddOp(0xc000a00 | opcode << 20 |
+		     (sregD.getIdx() & 1) << 23 | regN.getIdx() << 16 |
+		     (sregD.getIdx() >> 1) << 12 | offset);
 	}
 	void fopMem(uint32 opcode, const DFReg& dregD, const Reg& regN)
 	{
 		int disp = regN.getDisp();
 		uint32 offset = 0x800000 | disp;
-		dd(cond_ << 28 | 0xc000b00 | opcode << 20 |
-		   regN.getIdx() << 16 | dregD.getIdx() << 12 | offset);
+		ddOp(0xc000b00 | opcode << 20 |
+		     regN.getIdx() << 16 | dregD.getIdx() << 12 | offset);
 	}
 	void faddd(const DFReg& dreg1, const DFReg& dreg2, const DFReg& dreg3)
 	{
@@ -732,7 +743,6 @@ public:
 		, r0(0), r1(1), r2(2), r3(3), r4(4), r5(5), r6(6), r7(7), r8(8), r9(9), r10(10), r11(11), r12(12), r13(13), r14(14), r15(15)
 		, fp(Reg::FP), ip(Reg::IP), sp(Reg::SP)
 		, lr(Reg::LR), pc(Reg::PC), spW(Reg::SPW)
-		, cond_(AL)
 #ifndef DISABLE_VFP
 		, s0(0), s1(1), s2(2)
 		, d0(0), d1(1), d2(2)
