@@ -162,6 +162,8 @@ public:
 	int getIdx() const { return idx_; }
 };
 
+class ApsReg {
+};
 #endif
 
 class Nil : public Reg
@@ -374,8 +376,115 @@ public:
 	}
 };
 
-class CodeGenerator : public CodeArray {
+#ifndef DISABLE_VFP
+class VfpCodeGenerator {
+private:
+	CodeArray *code_;
+protected:
+	void fop(uint32 opcode, const DFReg& dregD, const DFReg& dregN, const DFReg& dregM) const
+	{
+		code_->ddOp(0xe000b00 | (opcode >> 4) << 20 |
+		            dregN.getIdx() << 16 | dregD.getIdx() << 12 |
+		            (opcode & 0xf) << 4 | dregM.getIdx());
+	}
+	void fop(uint32 opcode, const SFReg& sregN, const Reg& regD) const
+	{
+		code_->ddOp(0xe000a10 | opcode << 20 |
+		            (sregN.getIdx() >> 1) << 16 | regD.getIdx() << 12 |
+		            (sregN.getIdx() & 1) << 7);
+	}
+	void fop(uint32 opcode, const DFReg& dregM, const Reg& regD, const Reg& regN) const
+	{
+		code_->ddOp(0xc400b10 | (opcode >> 4) << 20 |
+		            regN.getIdx() << 16 | regD.getIdx() << 12 |
+		            dregM.getIdx());
+	}
+	void fopExt(uint32 opcode, const DFReg& dregD, const DFReg& dregM) const
+	{
+		code_->ddOp(0xeb00b00 | (opcode >> 4) << 16 |
+		            dregD.getIdx() << 12 | (opcode & 0xf) << 4 | dregM.getIdx());
+	}
+	void fopExt(uint32 opcode, const DFReg& dregD, const SFReg& sregM) const
+	{
+		code_->ddOp(0xeb00b00 | (opcode >> 4) << 16 |
+		            dregD.getIdx() << 12 | (opcode & 0xf) << 4 |
+		            (sregM.getIdx() & 1) << 5 | (sregM.getIdx() >> 1));
+	}
+	void fopMem(uint32 opcode, const SFReg& sregD, const Reg& regN) const
+	{
+		int disp = regN.getDisp();
+		uint32 offset = 0x800000 | disp;
+		code_->ddOp(0xc000a00 | opcode << 20 |
+		            (sregD.getIdx() & 1) << 23 | regN.getIdx() << 16 |
+		            (sregD.getIdx() >> 1) << 12 | offset);
+	}
+	void fopMem(uint32 opcode, const DFReg& dregD, const Reg& regN) const
+	{
+		int disp = regN.getDisp();
+		uint32 offset = 0x800000 | disp;
+		code_->ddOp(0xc000b00 | opcode << 20 |
+		            regN.getIdx() << 16 | dregD.getIdx() << 12 | offset);
+	}
 public:
+	VfpCodeGenerator(CodeArray *code) : code_(code)
+	{
+	}
+};
+
+class VaddGenerator : public VfpCodeGenerator {
+public:
+	VaddGenerator(CodeArray *code) : VfpCodeGenerator(code)
+	{
+	}
+	void f64(const DFReg& dreg1, const DFReg& dreg2, const DFReg& dreg3) const
+	{
+		fop(0x30, dreg1, dreg2, dreg3);
+	}
+};
+
+class VsubGenerator : public VfpCodeGenerator {
+public:
+	VsubGenerator(CodeArray *code) : VfpCodeGenerator(code)
+	{
+	}
+	void f64(const DFReg& dreg1, const DFReg& dreg2, const DFReg& dreg3) const
+	{
+		fop(0x34, dreg1, dreg2, dreg3);
+	}
+};
+
+class VcmpGenerator : public VfpCodeGenerator {
+public:
+	VcmpGenerator(CodeArray *code) : VfpCodeGenerator(code)
+	{
+	}
+	void f64(const DFReg& dreg1, const DFReg& dreg2) const
+	{
+		fopExt(0x44, dreg1, dreg2);
+	}
+};
+
+class VcvtF64Generator : public VfpCodeGenerator {
+public:
+	VcvtF64Generator(CodeArray *code) : VfpCodeGenerator(code)
+	{
+	}
+	void s32(const DFReg& dreg, const SFReg& sreg) const
+	{
+		fopExt(0x8c, dreg, sreg);
+	}
+};
+
+class VcvtGeneratorsCabinet {
+public:
+	const VcvtF64Generator f64;
+	VcvtGeneratorsCabinet(CodeArray *code) : f64(code)
+	{
+	}
+};
+#endif
+
+class CodeGenerator : public CodeArray, VfpCodeGenerator {
 private:
 	Label label_;
 	uint32 getOffset(const char *label, uint32 bitLen, uint32 sign,
@@ -472,6 +581,11 @@ public:
 	const SFReg s0, s1, s2;
 	const DFReg d0, d1, d2;
 	const SFReg fpscr;
+	const ApsReg APSR_nzcv;
+	const VaddGenerator vadd;
+	const VsubGenerator vsub;
+	const VcmpGenerator vcmp;
+	const VcvtGeneratorsCabinet vcvt;
 #endif
 	void L(const char *label)
 	{
@@ -652,87 +766,28 @@ public:
 		opJmp(label, VC);
 	}
 #ifndef DISABLE_VFP
-	void fop(uint32 opcode, const DFReg& dregD, const DFReg& dregN, const DFReg& dregM)
-	{
-		ddOp(0xe000b00 | (opcode >> 4) << 20 |
-		     dregN.getIdx() << 16 | dregD.getIdx() << 12 |
-		     (opcode & 0xf) << 4 | dregM.getIdx());
-	}
-	void fop(uint32 opcode, const SFReg& sregN, const Reg& regD)
-	{
-		ddOp(0xe000a10 | opcode << 20 |
-		     (sregN.getIdx() >> 1) << 16 | regD.getIdx() << 12 |
-		     (sregN.getIdx() & 1) << 7);
-	}
-	void fop(uint32 opcode, const DFReg& dregM, const Reg& regD, const Reg& regN)
-	{
-		ddOp(0xc400b10 | (opcode >> 4) << 20 |
-		     regN.getIdx() << 16 | regD.getIdx() << 12 |
-		     dregM.getIdx());
-	}
-	void fopExt(uint32 opcode, const DFReg& dregD, const DFReg& dregM)
-	{
-		ddOp(0xeb00b00 | (opcode >> 4) << 16 |
-		     dregD.getIdx() << 12 | (opcode & 0xf) << 4 | dregM.getIdx());
-	}
-	void fopExt(uint32 opcode, const DFReg& dregD, const SFReg& sregM)
-	{
-		ddOp(0xeb00b00 | (opcode >> 4) << 16 |
-		     dregD.getIdx() << 12 | (opcode & 0xf) << 4 |
-		     (sregM.getIdx() & 1) << 5 | (sregM.getIdx() >> 1));
-	}
-	void fopMem(uint32 opcode, const SFReg& sregD, const Reg& regN)
-	{
-		int disp = regN.getDisp();
-		uint32 offset = 0x800000 | disp;
-		ddOp(0xc000a00 | opcode << 20 |
-		     (sregD.getIdx() & 1) << 23 | regN.getIdx() << 16 |
-		     (sregD.getIdx() >> 1) << 12 | offset);
-	}
-	void fopMem(uint32 opcode, const DFReg& dregD, const Reg& regN)
-	{
-		int disp = regN.getDisp();
-		uint32 offset = 0x800000 | disp;
-		ddOp(0xc000b00 | opcode << 20 |
-		     regN.getIdx() << 16 | dregD.getIdx() << 12 | offset);
-	}
-	void faddd(const DFReg& dreg1, const DFReg& dreg2, const DFReg& dreg3)
-	{
-		fop(0x30, dreg1, dreg2, dreg3);
-	}
-	void fsubd(const DFReg& dreg1, const DFReg& dreg2, const DFReg& dreg3)
-	{
-		fop(0x34, dreg1, dreg2, dreg3);
-	}
-	void fcmpd(const DFReg& dreg1, const DFReg& dreg2)
-	{
-		fopExt(0x44, dreg1, dreg2);
-	}
-	void fmsr(const SFReg& sreg, const Reg& reg)
+	void vmov(const SFReg& sreg, const Reg& reg)
 	{
 		fop(0x0, sreg, reg);
 	}
-	void fmdrr(const DFReg& dreg, const Reg& reg1, const Reg& reg2)
+	void vmov(const DFReg& dreg, const Reg& reg1, const Reg& reg2)
 	{
 		fop(0x0, dreg, reg1, reg2);
 	}
-	void fmstat()
+	void vmrs(const ApsReg& apsr, const SFReg &sreg)
 	{
+		if (sreg.getIdx() != SFReg::FPSCR) { throw ERR_BAD_COMBINATION; }
 		fop(0xf, fpscr, r15);
 	}
-	void fsitod(const DFReg& dreg, const SFReg& sreg)
-	{
-		fopExt(0x8c, dreg, sreg);
-	}
-	void flds(const SFReg& sreg, const Reg& reg)
+	void vldr(const SFReg& sreg, const Reg& reg)
 	{
 		fopMem(0x11, sreg, reg);
 	}
-	void fldd(const DFReg& dreg, const Reg& reg)
+	void vldr(const DFReg& dreg, const Reg& reg)
 	{
 		fopMem(0x11, dreg, reg);
 	}
-	void fstd(const DFReg& dreg, const Reg& reg)
+	void vstr(const DFReg& dreg, const Reg& reg)
 	{
 		fopMem(0x10, dreg, reg);
 	}
@@ -740,6 +795,9 @@ public:
 public:
 	CodeGenerator(size_t maxSize = DEFAULT_MAX_CODE_SIZE, void *userPtr = 0, Allocator *allocator = 0)
 		: CodeArray(maxSize, userPtr, allocator)
+#ifndef DISABLE_VFP
+		, VfpCodeGenerator(this)
+#endif
 		, r0(0), r1(1), r2(2), r3(3), r4(4), r5(5), r6(6), r7(7), r8(8), r9(9), r10(10), r11(11), r12(12), r13(13), r14(14), r15(15)
 		, fp(Reg::FP), ip(Reg::IP), sp(Reg::SP)
 		, lr(Reg::LR), pc(Reg::PC), spW(Reg::SPW)
@@ -747,6 +805,8 @@ public:
 		, s0(0), s1(1), s2(2)
 		, d0(0), d1(1), d2(2)
 		, fpscr(SFReg::FPSCR)
+		, APSR_nzcv()
+		, vadd(this), vsub(this), vcmp(this), vcvt(this)
 #endif
 	{
 	}
