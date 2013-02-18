@@ -567,6 +567,12 @@ private:
 		dd(cond << 28 | 0xa000000 | (l ? 1 << 24 : 0) |
 		   ((const uint32)imm & 0xffffff));
 	}
+	void opJmp(const Reg& regM, Cond cond = NOCOND, bool l = false)
+	{
+		if (cond == NOCOND) { cond = getCond(); }
+		dd(cond << 28 | 0x12fff10 | (l ? 1 << 5 : 0) |
+		   regM.getIdx());
+	}
 	void opJmp(const char *label, Cond cond = NOCOND, bool l = false)
 	{
 		if (cond == NOCOND) { cond = getCond(); }
@@ -716,6 +722,10 @@ public:
 	void bl(const void *addr)
 	{
 		opJmp(((int32)addr - (int32)getCurr() - 8) >> 2, NOCOND, true);
+	}
+	void blx(const Reg& reg)
+	{
+		opJmp(reg, NOCOND, true);
 	}
 	void bcc(const int imm)
 	{
