@@ -723,6 +723,10 @@ public:
 	{
 		opJmp(((int32)addr - (int32)getCurr() - 8) >> 2, NOCOND, true);
 	}
+	void bx(const Reg& reg)
+	{
+		opJmp(reg, NOCOND);
+	}
 	void blx(const Reg& reg)
 	{
 		opJmp(reg, NOCOND, true);
