@@ -31,6 +31,7 @@ enum Error {
 	ERR_IMM_IS_TOO_BIG,
 	ERR_LABEL_IS_REDEFINED,
 	ERR_CANT_PROTECT,
+	ERR_OFFSET_IS_TOO_BIG,
 	ERR_CANT_ALLOC,
 	ERR_NOT_IMPL,
 	ERR_INTERNAL
@@ -44,6 +45,7 @@ inline const char *ConvertErrorToString(Error err)
 		"imm is too big",
 		"label is redefined",
 		"can't protect",
+		"offset is too big",
 		"can't alloc",
 		"not implemented yet",
 		"internal error",
@@ -246,7 +248,14 @@ public:
 	{
 		return cond_;
 	}
+	const uint32 *getCode() const { return top_; }
 	const uint32 *getCurr() const { return &top_[size_]; }
+	size_t getSize() const { return size_; }
+	void setSize(size_t size)
+	{
+		if (size >= maxSize_) throw ERR_OFFSET_IS_TOO_BIG;
+		size_ = size;
+	}
 	static inline bool protect(const void *addr, size_t size, bool canExec)
 	{
 		size_t pageSize = sysconf(_SC_PAGESIZE);
