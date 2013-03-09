@@ -701,9 +701,16 @@ public:
 	}
 	void pop(const Reg& reg1, const Reg& reg2 = nil,
 	         const Reg& reg3 = nil, const Reg& reg4 = nil,
-	         const Reg& reg5 = nil, const Reg& reg6 = nil)
+	         const Reg& reg5 = nil, const Reg& reg6 = nil,
+	         const Reg& reg7 = nil, const Reg& reg8 = nil,
+	         const Reg& reg9 = nil, const Reg& rega = nil,
+	         const Reg& regb = nil, const Reg& regc = nil,
+	         const Reg& regd = nil, const Reg& rege = nil,
+	         const Reg& regf = nil, const Reg& regg = nil)
 	{
-		const Reg regs[] = {reg1, reg2, reg3, reg4, reg5, reg6, nil};
+		const Reg regs[] = {reg1, reg2, reg3, reg4, reg5, reg6, reg7,
+                                    reg8, reg9, rega, regb, regc, regd, rege,
+                                    regf, regg, nil};
 		opMem(0x8b, sp, regs);
 	}
 	void stm(const Reg& reg1, const Reg& reg2,
@@ -715,9 +722,16 @@ public:
 	}
 	void push(const Reg& reg1, const Reg& reg2 = nil,
 	          const Reg& reg3 = nil, const Reg& reg4 = nil,
-	          const Reg& reg5 = nil, const Reg& reg6 = nil)
+	          const Reg& reg5 = nil, const Reg& reg6 = nil,
+	          const Reg& reg7 = nil, const Reg& reg8 = nil,
+	          const Reg& reg9 = nil, const Reg& rega = nil,
+	          const Reg& regb = nil, const Reg& regc = nil,
+	          const Reg& regd = nil, const Reg& rege = nil,
+	          const Reg& regf = nil, const Reg& regg = nil)
 	{
-		const Reg regs[] = {reg1, reg2, reg3, reg4, reg5, reg6, nil};
+		const Reg regs[] = {reg1, reg2, reg3, reg4, reg5, reg6, reg7,
+                                    reg8, reg9, rega, regb, regc, regd, rege,
+                                    regf, regg, nil};
 		opMem(0x92, sp, regs);
 	}
 	void b(const int32 imm)
