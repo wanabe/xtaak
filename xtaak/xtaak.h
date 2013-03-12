@@ -368,6 +368,8 @@ public:
 		              bitOffset2, bitMask2);
 		if (labelStr == "@f" || labelStr == "@F") {
 			labelStr = std::string("@@") + toStr(anonymousCount_ + 1);
+		} else if (labelStr == "@@f" || labelStr == "@@F") {
+			labelStr = std::string("@@") + toStr(anonymousCount_ + 2);
 		} else if (labelStr == "@b" || labelStr == "@B") {
 			labelStr = std::string("@@") + toStr(anonymousCount_);
 		}
