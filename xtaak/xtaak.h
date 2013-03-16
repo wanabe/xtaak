@@ -615,6 +615,10 @@ public:
 	{
 		op(0x1a, reg1, nil, reg2);
 	}
+	void mov(const Reg& reg1, const uint32 imm)
+	{
+		op(0x3a, reg1, nil, imm);
+	}
 	void movw(const Reg& reg, const uint32 imm)
 	{
 		op(0x30, reg, imm);
