@@ -352,9 +352,10 @@ public:
 		}
 		std::pair<LabelTable::iterator, bool> ret = labelTable_.insert(LabelTable::value_type(labelStr, addr));
 		if (!ret.second) { throw ERR_LABEL_IS_REDEFINED; }
+		std::pair<OffsetTable::iterator, OffsetTable::iterator> itrPair;
+		itrPair = offsetTable_.equal_range(labelStr);
 		OffsetTable::iterator itr;
-		OffsetTable::iterator tail = offsetTable_.end();
-		for(itr = offsetTable_.find(labelStr); itr != tail; itr++) {
+		for(itr = itrPair.first; itr != itrPair.second; itr++) {
 			code->ddOr(itr->second.getImm(addr), itr->second.getBase());
 		}
 		offsetTable_.erase(labelStr);
