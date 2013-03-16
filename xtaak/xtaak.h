@@ -373,6 +373,8 @@ public:
 			labelStr = std::string("@@") + toStr(anonymousCount_ + 2);
 		} else if (labelStr == "@b" || labelStr == "@B") {
 			labelStr = std::string("@@") + toStr(anonymousCount_);
+		} else if (labelStr == "@@b" || labelStr == "@@B") {
+			labelStr = std::string("@@") + toStr(anonymousCount_ - 1);
 		}
 		LabelTable::iterator itr = labelTable_.find(labelStr);
 		LabelTable::iterator tail = labelTable_.end();
