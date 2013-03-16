@@ -650,6 +650,11 @@ public:
 	{
 		op(0x29, reg1, reg2, imm);
 	}
+	void add(const Reg& reg1, const char *label)
+	{
+		uint32 imm = getOffset(label, 12, 0);
+		op(0x28, reg1, pc, imm);
+	}
 	void subs(const Reg& reg1, const Reg& reg2, const Reg& reg3)
 	{
 		op(0x05, reg1, reg2, reg3);
